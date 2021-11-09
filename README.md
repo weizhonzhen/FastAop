@@ -58,3 +58,11 @@ public class Log1Aop : FastAopAttribute
         //throw new NotImplementedException();
     }
 }
+
+```
+Test
+```csharp
+var model = services.BuildServiceProvider().GetRequiredService<ITestAop>();
+model.Test1("1", "3");
+model.Test1("2", "4");
+ ```
