@@ -16,7 +16,7 @@ public class TestAop : ITestAop
     {
         int ae = 0;
         a += "_b";
-        //var ad = 9 / ae;
+        var ad = 9 / ae;
         return a;
     }
 }
