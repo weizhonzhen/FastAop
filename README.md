@@ -66,3 +66,12 @@ var model = services.BuildServiceProvider().GetRequiredService<ITestAop>();
 model.Test1("1", "3");
 model.Test1("2", "4");
  ```
+# FastRabbitMQ
+nuget url: https://www.nuget.org/packages/FastAop/
+
+Test
+```csharp
+var model = (ITestAop)FastAop.Instance(typeof(TestAop), typeof(ITestAop));
+model.Test1("1", "3");
+model.Test1("2", "4");
+```
