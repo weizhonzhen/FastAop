@@ -1,5 +1,6 @@
 # FastAop.Core
 nuget url: https://www.nuget.org/packages/FastAop.Core/
+
 in Startup.cs Startup mothod
 ```csharp
 services.AddFastAop("FastAop.Core.Test");
@@ -29,11 +30,9 @@ public class LogAop : FastAopAttribute
         //throw new NotImplementedException();
     }
 
-
     public override void Before(BeforeContext context)
     {
         //throw new NotImplementedException();
-
     }
 
     public override void Exception(ExceptionContext exception)
@@ -49,16 +48,13 @@ public class Log1Aop : FastAopAttribute
         //throw new NotImplementedException();
     }
 
-
     public override void Before(BeforeContext context)
     {
         //throw new NotImplementedException();
-
     }
 
     public override void Exception(ExceptionContext exception)
     {
         //throw new NotImplementedException();
-
     }
 }
