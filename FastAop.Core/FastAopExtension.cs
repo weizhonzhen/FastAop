@@ -3,7 +3,7 @@ using System;
 using System.Linq;
 using System.Reflection;
 
-namespace FastAop.Core
+namespace Microsoft.Extensions.DependencyInjection
 {
     public static class FastAopExtension
     {
