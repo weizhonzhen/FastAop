@@ -66,7 +66,7 @@ var model = services.BuildServiceProvider().GetRequiredService<ITestAop>();
 model.Test1("1", "3");
 model.Test1("2", "4");
  ```
-# FastRabbitMQ
+# FastAop
 nuget url: https://www.nuget.org/packages/FastAop/
 
 Test
