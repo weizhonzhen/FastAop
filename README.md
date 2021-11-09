@@ -72,6 +72,8 @@ nuget url: https://www.nuget.org/packages/FastAop/
 Test
 ```csharp
 var model = (ITestAop)FastAop.Instance(typeof(TestAop), typeof(ITestAop));
+or
+var model = FastAop.Instance<TestAop, ITestAop>();
 model.Test1("1", "3");
 model.Test1("2", "4");
 ```
