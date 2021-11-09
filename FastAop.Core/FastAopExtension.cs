@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using FastAop.Core;
 using System;
 using System.Linq;
 using System.Reflection;
@@ -31,7 +31,7 @@ namespace Microsoft.Extensions.DependencyInjection
                             });
 
                             if (!b.IsInterface && b.GetInterfaces().Any() && isServiceAttr)
-                                serviceCollection.AddSingleton(b.GetInterfaces().First(), FastAop.Instance(b, b.GetInterfaces().First()).GetType());
+                                serviceCollection.AddSingleton(b.GetInterfaces().First(), FastAop.Core.FastAop.Instance(b, b.GetInterfaces().First()).GetType());
                             else if (!b.IsInterface && b.GetInterfaces().Any())
                                 serviceCollection.AddTransient(b.GetInterfaces().First(),b);
 
