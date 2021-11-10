@@ -81,6 +81,9 @@ Test
 var model = (ITestAop)FastAop.Instance(typeof(TestAop), typeof(ITestAop));
 or
 var model = FastAop.Instance<TestAop, ITestAop>();
+
+//aotuo add aop
+var model = (ITestAop)FastAop.AddAttribute(typeof(LogAop), typeof(TestAop), typeof(ITestAop));
 model.Test1("1", "3");
 model.Test1("2", "4");
 ```
