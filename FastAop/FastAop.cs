@@ -14,6 +14,14 @@ namespace FastAop
             return Proxy(serviceType, interfaceType).CreateDelegate(Expression.GetFuncType(new Type[] { interfaceType })).DynamicInvoke();
         }
 
+        public static object Instance(Type attrType, Type serviceType, Type interfaceType)
+        {
+            if (attrType.BaseType != typeof(FastAopAttribute))
+                throw new Exception($"attrType baseType not is FastAopAttribute,class name:{attrType.Name}");
+
+            return Proxy(serviceType, interfaceType, attrType).CreateDelegate(Expression.GetFuncType(new Type[] { interfaceType })).DynamicInvoke();
+        }
+
         public static I Instance<S, I>() where S : class, new() where I : class
         {
             return FuncAop<S, I>.Instance();
@@ -32,7 +40,7 @@ namespace FastAop
             }
         }
 
-        private static DynamicMethod Proxy(Type serviceType, Type interfaceType)
+        private static DynamicMethod Proxy(Type serviceType, Type interfaceType, Type attrType = null)
         {
             if (!interfaceType.IsInterface)
                 throw new Exception($"interfaceType only Interface class,class name:{interfaceType.Name}");
@@ -119,16 +127,27 @@ namespace FastAop
                 var beforeMethod = aopAttrType.GetMethod("Before");
                 var afterMethod = aopAttrType.GetMethod("After");
                 var exceptionMethod = aopAttrType.GetMethod("Exception");
-                var aopAttribute = serviceType.GetMethod(currentMthod.Name, currentMthod.GetParameters().Select(p => p.ParameterType).ToArray()).GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToArray();
+                var aopAttribute = new List<FastAopAttribute>();
+
+                if (attrType == null)
+                    aopAttribute = serviceType.GetMethod(currentMthod.Name, currentMthod.GetParameters().Select(p => p.ParameterType).ToArray()).GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToList();
+                else
+                {
+                    var classCtorInfo = attrType.GetConstructor(Type.EmptyTypes);
+                    var attributeBuilder = new CustomAttributeBuilder(classCtorInfo, new object[] { });
+                    method.SetCustomAttribute(attributeBuilder);
+                    aopAttribute.Add(Activator.CreateInstance(attrType) as FastAopAttribute);
+                }
+
                 var attrList = new List<LocalBuilder>();
 
                 //attr
-                for (int attr = 0; attr < aopAttribute.Length; attr++)
+                for (int attr = 0; attr < aopAttribute.Count; attr++)
                 {
                     //DeclareContext attr
-                    var attrType = (aopAttribute[attr]).GetType();
-                    var attrLocal = mIL.DeclareLocal(attrType);
-                    mIL.Emit(OpCodes.Newobj, attrType.GetConstructor(Type.EmptyTypes));
+                    var attr_Type = (aopAttribute[attr]).GetType();
+                    var attrLocal = mIL.DeclareLocal(attr_Type);
+                    mIL.Emit(OpCodes.Newobj, attr_Type.GetConstructor(Type.EmptyTypes));
 
                     //BeforeContext
                     mIL.Emit(OpCodes.Stloc, attrLocal);
@@ -191,7 +210,7 @@ namespace FastAop
                 mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod("set_Paramter"), new[] { typeof(object[]) });
 
                 //attr
-                for (int ex = 0; ex < aopAttribute.Length; ex++)
+                for (int ex = 0; ex < aopAttribute.Count; ex++)
                 {
                     //ExceptionContext
                     mIL.Emit(OpCodes.Ldloc, attrList[ex]);
@@ -202,7 +221,7 @@ namespace FastAop
                 mIL.EndExceptionBlock();
 
                 //attr
-                for (int attr = 0; attr < aopAttribute.Length; attr++)
+                for (int attr = 0; attr < aopAttribute.Count; attr++)
                 {
                     //AfterContext
                     mIL.Emit(OpCodes.Ldloc, attrList[attr]);
