@@ -21,7 +21,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 {
                     try
                     {
-                        assembly.GetTypes().Where(a => a.Namespace != null && a.Namespace == NamespaceService).ToList().ForEach(b =>
+                        assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace == NamespaceService).ToList().ForEach(b =>
                         {
                             var isServiceAttr = false;
                             b.GetMethods().ToList().ForEach(m =>
