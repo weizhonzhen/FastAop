@@ -120,7 +120,8 @@ namespace FastAop.Core
                 var beforeMethod = aopAttrType.GetMethod("Before");
                 var afterMethod = aopAttrType.GetMethod("After");
                 var exceptionMethod = aopAttrType.GetMethod("Exception");
-                var aopAttribute = serviceType.GetMethod(currentMthod.Name).GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToArray();
+                
+                var aopAttribute = serviceType.GetMethod(currentMthod.Name, currentMthod.GetParameters().Select(p => p.ParameterType).ToArray()).GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToArray();
                 var attrList = new List<LocalBuilder>();
 
                 //before attr
