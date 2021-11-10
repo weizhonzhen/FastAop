@@ -54,17 +54,11 @@ namespace Microsoft.Extensions.DependencyInjection
                 {
                     assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace == NamespaceService).ToList().ForEach(b =>
                     {
-                        var isServiceAttr = false;
-                        b.GetMethods().ToList().ForEach(m =>
-                        {
-                            if (m.GetCustomAttributes().ToList().Exists(a => a.GetType().BaseType == typeof(FastAopAttribute)))
-                                isServiceAttr = true;
-                        });
+                        if (aopType.BaseType != typeof(FastAopAttribute) && !b.IsInterface && b.GetInterfaces().Any()) 
+                            serviceCollection.AddSingleton(b.GetInterfaces().First(), FastAop.Core.FastAop.Instance(aopType, b, b.GetInterfaces().First()).GetType());
 
-                        if (!b.IsInterface && b.GetInterfaces().Any() && isServiceAttr)
-                            serviceCollection.AddSingleton(b.GetInterfaces().First(), FastAop.Core.FastAop.AddAttribute(aopType, b, b.GetInterfaces().First()).GetType());
-                        else if (!b.IsInterface && b.GetInterfaces().Any())
-                            serviceCollection.AddTransient(b.GetInterfaces().First(), b);
+                        if (aopType.BaseType == typeof(FastAopAttribute) && !b.IsInterface && b.GetInterfaces().Any())
+                            serviceCollection.AddSingleton(b.GetInterfaces().First(), FastAop.Core.FastAop.Instance(aopType, b, b.GetInterfaces().First()).GetType());
                     });
                 });
             }

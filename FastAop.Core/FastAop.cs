@@ -236,11 +236,8 @@ namespace FastAop.Core
             return dynMethod;
         }
 
-        internal static object AddAttribute(Type attrType, Type serviceType, Type interfaceType)
+        internal static object Instance(Type attrType, Type serviceType, Type interfaceType)
         {
-            if (attrType.BaseType != typeof(FastAopAttribute))
-                throw new Exception($"attrType baseType not is FastAopAttribute,class name:{attrType.Name}");
-
             return Proxy(serviceType, interfaceType, attrType).CreateDelegate(Expression.GetFuncType(new Type[] { interfaceType })).DynamicInvoke();
         }
     }
