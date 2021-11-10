@@ -3,9 +3,13 @@ nuget url: https://www.nuget.org/packages/FastAop.Core/
 
 in Startup.cs Startup mothod
 ```csharp
-more aop by 
+//more aop by 
 services.AddFastAop("FastAop.Core.Test");
-one aop
+
+//add Global aop
+services.AddFastAop("FastAop.Core.Test",typeof(LogAop));
+
+//one aop
 var model = FastAop.Instance<TestAop, ITestAop>();
 
 public class TestAop : ITestAop
