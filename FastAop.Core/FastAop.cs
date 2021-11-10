@@ -32,7 +32,7 @@ namespace FastAop.Core
             }
         }
 
-        private static DynamicMethod Proxy(Type serviceType, Type interfaceType)
+        private static DynamicMethod Proxy(Type serviceType, Type interfaceType, Type attrType = null)
         {
             if (!interfaceType.IsInterface)
                 throw new Exception($"interfaceType only Interface class,class name:{interfaceType.Name}");
@@ -116,23 +116,32 @@ namespace FastAop.Core
                 mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("set_MethodName"), new[] { typeof(string) });
 
                 //aop attr
+                var aopAttribute = new List<FastAopAttribute>();
+                var attrList = new List<LocalBuilder>();
                 var aopAttrType = typeof(FastAopAttribute);
                 var beforeMethod = aopAttrType.GetMethod("Before");
                 var afterMethod = aopAttrType.GetMethod("After");
                 var exceptionMethod = aopAttrType.GetMethod("Exception");
-                
-                var aopAttribute = serviceType.GetMethod(currentMthod.Name, currentMthod.GetParameters().Select(p => p.ParameterType).ToArray()).GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToArray();
-                var attrList = new List<LocalBuilder>();
+
+                if (attrType == null)
+                    aopAttribute = serviceType.GetMethod(currentMthod.Name, currentMthod.GetParameters().Select(p => p.ParameterType).ToArray()).GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToList();
+                else
+                {
+                    var classCtorInfo = attrType.GetConstructor(Type.EmptyTypes);
+                    var attributeBuilder = new CustomAttributeBuilder(classCtorInfo, new object[] { });
+                    method.SetCustomAttribute(attributeBuilder);
+                    aopAttribute.Add(Activator.CreateInstance(attrType) as FastAopAttribute);
+                }
 
                 //before attr
-                for (int attr = 0; attr < aopAttribute.Length; attr++)
+                for (int attr = 0; attr < aopAttribute.Count; attr++)
                 {
                     //Declare attr type
-                    var attrType = (aopAttribute[attr]).GetType();
-                    var attrLocal = mIL.DeclareLocal(attrType);
+                    var attr_Type = (aopAttribute[attr]).GetType();
+                    var attrLocal = mIL.DeclareLocal(attr_Type);
 
                     //BeforeContext
-                    mIL.Emit(OpCodes.Newobj, attrType.GetConstructor(Type.EmptyTypes));
+                    mIL.Emit(OpCodes.Newobj, attr_Type.GetConstructor(Type.EmptyTypes));
                     mIL.Emit(OpCodes.Stloc, attrLocal);
                     mIL.Emit(OpCodes.Ldloc, attrLocal);
                     mIL.Emit(OpCodes.Ldloc, beforeContext);
@@ -193,7 +202,7 @@ namespace FastAop.Core
                 mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod("set_Paramter"), new[] { typeof(object[]) });
 
                 //attr
-                for (int ex = 0; ex < aopAttribute.Length; ex++)
+                for (int ex = 0; ex < aopAttribute.Count; ex++)
                 {
                     //ExceptionContext
                     mIL.Emit(OpCodes.Ldloc, attrList[ex]);
@@ -204,7 +213,7 @@ namespace FastAop.Core
                 mIL.EndExceptionBlock();
 
                 //attr
-                for (int attr = 0; attr < aopAttribute.Length; attr++)
+                for (int attr = 0; attr < aopAttribute.Count; attr++)
                 {
                     //AfterContext
                     mIL.Emit(OpCodes.Ldloc, attrList[attr]);
@@ -225,6 +234,14 @@ namespace FastAop.Core
             dynIL.Emit(OpCodes.Ret);
 
             return dynMethod;
+        }
+
+        internal static object AddAttribute(Type attrType, Type serviceType, Type interfaceType)
+        {
+            if (attrType.BaseType != typeof(FastAopAttribute))
+                throw new Exception($"attrType baseType not is FastAopAttribute,class name:{attrType.Name}");
+
+            return Proxy(serviceType, interfaceType, attrType).CreateDelegate(Expression.GetFuncType(new Type[] { interfaceType })).DynamicInvoke();
         }
     }
 }
