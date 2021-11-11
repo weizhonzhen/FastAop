@@ -124,9 +124,10 @@ namespace FastAop.Core
                 var exceptionMethod = aopAttrType.GetMethod("Exception");
 
                 if (attrType == null)
-                    aopAttribute = serviceType.GetMethod(currentMthod.Name, currentMthod.GetParameters().Select(p => p.ParameterType).ToArray()).GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToList();
+                    aopAttribute = serviceType.GetMethod(currentMthod.Name, mTypes).GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToList();
                 else
                 {
+                    //auto add FastAopAttribute
                     var classCtorInfo = attrType.GetConstructor(Type.EmptyTypes);
                     var attributeBuilder = new CustomAttributeBuilder(classCtorInfo, new object[] { });
                     method.SetCustomAttribute(attributeBuilder);
