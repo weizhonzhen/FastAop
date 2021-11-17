@@ -66,6 +66,15 @@ namespace FastAop.Core
                 var mTypes = currentMthod.GetParameters().Select(d => d.ParameterType).ToArray();
                 var method = builder.DefineMethod(currentMthod.Name, MethodAttributes.Public | MethodAttributes.NewSlot | MethodAttributes.Virtual, currentMthod.ReturnType, mTypes);
 
+                //Generic Method
+                if (currentMthod.IsGenericMethod)
+                {
+                    method.DefineGenericParameters(currentMthod.GetGenericArguments().ToList().Select(a => a.Name).ToArray());
+
+                    if (currentMthod.GetGenericArguments()[0].GenericParameterAttributes.ToString() != GenericParameterAttributes.None.ToString())
+                        throw new Exception($"Interface class name:{interfaceType.Name},method name:{currentMthod.Name}, not support Generic Method constraint");
+                }
+
                 var mIL = method.GetILGenerator();
 
                 //Declare Paramter
