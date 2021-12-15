@@ -73,7 +73,7 @@ namespace FastAop
                 var mTypes = currentMthod.GetParameters().Select(d => d.ParameterType).ToArray();
                 var method = builder.DefineMethod(currentMthod.Name, MethodAttributes.Public | MethodAttributes.NewSlot | MethodAttributes.Virtual, currentMthod.ReturnType, mTypes);
 
-                 //Generic Method
+                //Generic Method
                 if (currentMthod.IsGenericMethod)
                 {
                     method.DefineGenericParameters(currentMthod.GetGenericArguments().ToList().Select(a => a.Name).ToArray());
@@ -81,7 +81,7 @@ namespace FastAop
                     if (currentMthod.GetGenericArguments()[0].GenericParameterAttributes.ToString() != GenericParameterAttributes.None.ToString())
                         throw new Exception($"Interface class name:{interfaceType.Name},method name:{currentMthod.Name}, not support Generic Method constraint");
                 }
-                
+
                 var mIL = method.GetILGenerator();
 
                 //Declare Paramter
@@ -110,12 +110,25 @@ namespace FastAop
                 mIL.Emit(OpCodes.Ldloc, beforeContext);
                 mIL.Emit(OpCodes.Ldloc, local);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod("set_Paramter"), new[] { typeof(object[]) });
+              
+                //BeforeContext ServerName
+                mIL.Emit(OpCodes.Ldloc, beforeContext);
+                mIL.Emit(OpCodes.Ldstr, serviceType.Name);
+                mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod("set_ServiceName"), new[] { typeof(string) });
 
-                //Before BeforeContext MethodName
+                //BeforeContext ArgumentName
+                if (currentMthod.IsGenericMethod && currentMthod.DeclaringType.GenericTypeArguments.Length > 0)
+                {
+                    mIL.Emit(OpCodes.Ldloc, beforeContext);
+                    mIL.Emit(OpCodes.Ldstr, currentMthod.DeclaringType.GenericTypeArguments[0].Name);
+                    mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod("set_ServiceArgumentName"), new[] { typeof(string) });
+                }
+
+                //BeforeContext MethodName
                 mIL.Emit(OpCodes.Ldloc, beforeContext);
                 mIL.Emit(OpCodes.Ldstr, currentMthod.Name);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod("set_MethodName"), new[] { typeof(string) });
-
+                               
                 //Declare AfterContext
                 var afterContext = mIL.DeclareLocal(typeof(AfterContext));
                 mIL.Emit(OpCodes.Newobj, typeof(AfterContext).GetConstructor(Type.EmptyTypes));
@@ -125,6 +138,19 @@ namespace FastAop
                 mIL.Emit(OpCodes.Ldloc, afterContext);
                 mIL.Emit(OpCodes.Ldloc, local);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("set_Paramter"), new[] { typeof(object[]) });
+
+                //AfterContext ServerName
+                mIL.Emit(OpCodes.Ldloc, afterContext);
+                mIL.Emit(OpCodes.Ldstr, serviceType.Name);
+                mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("set_ServiceName"), new[] { typeof(string) });
+
+                //AfterContext ArgumentName
+                if (currentMthod.IsGenericMethod && currentMthod.DeclaringType.GenericTypeArguments.Length > 0)
+                {
+                    mIL.Emit(OpCodes.Ldloc, afterContext);
+                    mIL.Emit(OpCodes.Ldstr, currentMthod.DeclaringType.GenericTypeArguments[0].Name);
+                    mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("set_ServiceArgumentName"), new[] { typeof(string) });
+                }
 
                 //AfterContext MethodName
                 mIL.Emit(OpCodes.Ldloc, afterContext);
@@ -139,9 +165,10 @@ namespace FastAop
                 var aopAttribute = new List<FastAopAttribute>();
 
                 if (attrType == null)
-                    aopAttribute = serviceType.GetMethod(currentMthod.Name, mTypes).GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToList();
+                    aopAttribute = serviceType.GetMethod(currentMthod.Name,mTypes).GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToList();
                 else
                 {
+                    //auto add FastAopAttribute
                     var classCtorInfo = attrType.GetConstructor(Type.EmptyTypes);
                     var attributeBuilder = new CustomAttributeBuilder(classCtorInfo, new object[] { });
                     method.SetCustomAttribute(attributeBuilder);
@@ -203,17 +230,30 @@ namespace FastAop
                 var exception = mIL.DeclareLocal(typeof(Exception));
                 mIL.Emit(OpCodes.Stloc, exception);
 
-                //ExceptionContext exception
+                //Exception Context exception
                 mIL.Emit(OpCodes.Ldloc, exceptionContext);
                 mIL.Emit(OpCodes.Ldloc, exception);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod("set_Exception"), new[] { typeof(Exception) });
 
-                //ExceptionContext MethodName
+                //Exception Context ServerName
+                mIL.Emit(OpCodes.Ldloc, exceptionContext);
+                mIL.Emit(OpCodes.Ldstr, serviceType.Name);
+                mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod("set_ServiceName"), new[] { typeof(string) });
+
+                //Exception Context ArgumentName
+                if (currentMthod.IsGenericMethod && currentMthod.DeclaringType.GenericTypeArguments.Length > 0)
+                {
+                    mIL.Emit(OpCodes.Ldloc, exceptionContext);
+                    mIL.Emit(OpCodes.Ldstr, currentMthod.DeclaringType.GenericTypeArguments[0].Name);
+                    mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod("set_ServiceArgumentName"), new[] { typeof(string) });
+                }
+
+                //Exception Context MethodName
                 mIL.Emit(OpCodes.Ldloc, exceptionContext);
                 mIL.Emit(OpCodes.Ldstr, currentMthod.Name);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod("set_MethodName"), new[] { typeof(string) });
 
-                //ExceptionContext Paramter;
+                //Exception Context Paramter;
                 mIL.Emit(OpCodes.Ldloc, exceptionContext);
                 mIL.Emit(OpCodes.Ldloc, local);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod("set_Paramter"), new[] { typeof(object[]) });
@@ -240,6 +280,11 @@ namespace FastAop
 
                 if (currentMthod.ReturnType != typeof(void))
                     mIL.Emit(OpCodes.Ldloc, returnData);
+
+                if (method.ReturnType.IsValueType)
+                    mIL.Emit(OpCodes.Unbox_Any, method.ReturnType);
+                else
+                    mIL.Emit(OpCodes.Castclass, method.ReturnType);
 
                 mIL.Emit(OpCodes.Ret);
             }
