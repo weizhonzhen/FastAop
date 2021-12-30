@@ -34,6 +34,7 @@ public class LogAop : FastAopAttribute
 {
     public override void After(AfterContext context)
     {
+        context.Result = "update result test"; //update result data
         //throw new NotImplementedException();
     }
 
@@ -52,6 +53,7 @@ public class Log1Aop : FastAopAttribute
 {
     public override void After(AfterContext context)
     {
+        context.Result = "update result"; //update result data
         //throw new NotImplementedException();
     }
 
@@ -70,8 +72,8 @@ public class Log1Aop : FastAopAttribute
 Test
 ```csharp
 var model = services.BuildServiceProvider().GetRequiredService<ITestAop>();
-model.Test1("1", "3");
-model.Test1("2", "4");
+model.Test1("1", "3");  //result data is "update result test"
+model.Test1("2", "4"); //result data is "update result test"
  ```
 # FastAop
 nuget url: https://www.nuget.org/packages/FastAop/
