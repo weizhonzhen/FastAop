@@ -273,6 +273,17 @@ namespace FastAop.Core
                 if (currentMthod.ReturnType != typeof(void))
                     mIL.Emit(OpCodes.Ldloc, returnData);
 
+                if (method.ReturnType.IsValueType)
+                    mIL.Emit(OpCodes.Unbox_Any, method.ReturnType);
+                else
+                    mIL.Emit(OpCodes.Castclass, method.ReturnType);
+
+                //update return data
+                var result = mIL.DeclareLocal(currentMthod.ReturnType);
+                mIL.Emit(OpCodes.Stloc, result);
+                mIL.Emit(OpCodes.Ldloc, afterContext);
+                mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("get_Result"), null);
+
                 mIL.Emit(OpCodes.Ret);
             }
 
