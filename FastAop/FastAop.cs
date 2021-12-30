@@ -110,7 +110,7 @@ namespace FastAop
                 mIL.Emit(OpCodes.Ldloc, beforeContext);
                 mIL.Emit(OpCodes.Ldloc, local);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod("set_Paramter"), new[] { typeof(object[]) });
-              
+
                 //BeforeContext ServerName
                 mIL.Emit(OpCodes.Ldloc, beforeContext);
                 mIL.Emit(OpCodes.Ldstr, serviceType.Name);
@@ -128,7 +128,7 @@ namespace FastAop
                 mIL.Emit(OpCodes.Ldloc, beforeContext);
                 mIL.Emit(OpCodes.Ldstr, currentMthod.Name);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod("set_MethodName"), new[] { typeof(string) });
-                               
+
                 //Declare AfterContext
                 var afterContext = mIL.DeclareLocal(typeof(AfterContext));
                 mIL.Emit(OpCodes.Newobj, typeof(AfterContext).GetConstructor(Type.EmptyTypes));
@@ -165,7 +165,7 @@ namespace FastAop
                 var aopAttribute = new List<FastAopAttribute>();
 
                 if (attrType == null)
-                    aopAttribute = serviceType.GetMethod(currentMthod.Name,mTypes).GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToList();
+                    aopAttribute = serviceType.GetMethod(currentMthod.Name, mTypes).GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToList();
                 else
                 {
                     //auto add FastAopAttribute
@@ -253,7 +253,7 @@ namespace FastAop
                 mIL.Emit(OpCodes.Ldstr, currentMthod.Name);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod("set_MethodName"), new[] { typeof(string) });
 
-                //Exception Context Paramter;
+                //Exception Context Paramter
                 mIL.Emit(OpCodes.Ldloc, exceptionContext);
                 mIL.Emit(OpCodes.Ldloc, local);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod("set_Paramter"), new[] { typeof(object[]) });
@@ -285,6 +285,12 @@ namespace FastAop
                     mIL.Emit(OpCodes.Unbox_Any, method.ReturnType);
                 else
                     mIL.Emit(OpCodes.Castclass, method.ReturnType);
+
+                //update return data
+                var result = mIL.DeclareLocal(currentMthod.ReturnType);
+                mIL.Emit(OpCodes.Stloc, result);
+                mIL.Emit(OpCodes.Ldloc, afterContext);
+                mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("get_Result"), null);
 
                 mIL.Emit(OpCodes.Ret);
             }
