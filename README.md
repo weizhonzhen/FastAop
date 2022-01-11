@@ -34,18 +34,19 @@ public class LogAop : FastAopAttribute
 {
     public override void After(AfterContext context)
     {
-        context.Result = "update result test"; //update result data
+        context.Result = "update result After"; //update result data
     }
 
     public override void Before(BeforeContext context)
     {
         context.IsReturn = true;
-        context.Result = "update result test"; //update result data 
+        context.Result = "update result Before"; //update result data 
     }
 
     public override void Exception(ExceptionContext exception)
     {
-        //throw new NotImplementedException();
+        context.IsReturn = true;
+        context.Result = "update result Exception"; //update result data 
     }
 }
 
@@ -53,18 +54,19 @@ public class Log1Aop : FastAopAttribute
 {
     public override void After(AfterContext context)
     {
-        context.Result = "update result"; //update result data
-        //throw new NotImplementedException();
+         context.Result = "update result After"; //update result data
     }
 
     public override void Before(BeforeContext context)
     {
-        //throw new NotImplementedException();
+        context.IsReturn = true;
+        context.Result = "update result Before"; //update result data 
     }
 
     public override void Exception(ExceptionContext exception)
     {
-        //throw new NotImplementedException();
+        context.IsReturn = true;
+        context.Result = "update result Exception"; //update result data 
     }
 }
 
