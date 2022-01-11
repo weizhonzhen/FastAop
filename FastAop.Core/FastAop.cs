@@ -278,11 +278,29 @@ namespace FastAop.Core
                 else
                     mIL.Emit(OpCodes.Castclass, method.ReturnType);
 
-                //update return data
-                var result = mIL.DeclareLocal(currentMthod.ReturnType);
-                mIL.Emit(OpCodes.Stloc, result);
+                //check update return data BeforeContext 
+                var before_False = mIL.DefineLabel();
+                var before_Ret = mIL.DefineLabel();
+                mIL.Emit(OpCodes.Ldloc, beforeContext);
+                mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod("get_IsReturn"), null);
+                mIL.Emit(OpCodes.Brfalse, before_False);
+
+                //beforeContext IsReturn true 
+                var beforeResult = mIL.DeclareLocal(currentMthod.ReturnType);
+                mIL.Emit(OpCodes.Stloc, beforeResult);
+                mIL.Emit(OpCodes.Ldloc, beforeContext);
+                mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod("get_Result"), null);
+
+                mIL.Emit(OpCodes.Br, before_Ret);
+                mIL.MarkLabel(before_False);
+
+                //afterContext IsReturn false
+                var afterResult = mIL.DeclareLocal(currentMthod.ReturnType);
+                mIL.Emit(OpCodes.Stloc, afterResult);
                 mIL.Emit(OpCodes.Ldloc, afterContext);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("get_Result"), null);
+
+                mIL.MarkLabel(before_Ret);
 
                 mIL.Emit(OpCodes.Ret);
             }

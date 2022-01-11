@@ -47,7 +47,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 Assembly.GetCallingAssembly().GetReferencedAssemblies().ToList().ForEach(a =>
                 {
                     if (!AppDomain.CurrentDomain.GetAssemblies().ToList().Exists(b => b.GetName().Name == a.Name))
-                        try { Assembly.Load(a.Name); } catch (Exception ex) { }
+                        try { Assembly.Load(a.Name); } catch (Exception) { }
                 });
 
                 AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(assembly =>
