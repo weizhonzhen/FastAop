@@ -157,6 +157,11 @@ namespace FastAop
                 mIL.Emit(OpCodes.Ldstr, currentMthod.Name);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("set_MethodName"), new[] { typeof(string) });
 
+                //Declare ExceptionContext
+                var exceptionContext = mIL.DeclareLocal(typeof(ExceptionContext));
+                mIL.Emit(OpCodes.Newobj, typeof(ExceptionContext).GetConstructor(Type.EmptyTypes));
+                mIL.Emit(OpCodes.Stloc, exceptionContext);
+
                 //aop attr
                 var aopAttrType = typeof(FastAopAttribute);
                 var beforeMethod = aopAttrType.GetMethod("Before");
@@ -220,11 +225,6 @@ namespace FastAop
                 }
 
                 mIL.BeginCatchBlock(typeof(Exception));
-
-                //Declare ExceptionContext
-                var exceptionContext = mIL.DeclareLocal(typeof(ExceptionContext));
-                mIL.Emit(OpCodes.Newobj, typeof(ExceptionContext).GetConstructor(Type.EmptyTypes));
-                mIL.Emit(OpCodes.Stloc, exceptionContext);
 
                 //Declare exception
                 var exception = mIL.DeclareLocal(typeof(Exception));
@@ -298,17 +298,36 @@ namespace FastAop
                 mIL.Emit(OpCodes.Stloc, beforeResult);
                 mIL.Emit(OpCodes.Ldloc, beforeContext);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod("get_Result"), null);
-
                 mIL.Emit(OpCodes.Br, before_Ret);
-                mIL.MarkLabel(before_False);
 
-                //afterContext IsReturn false
+                //beforeContext IsReturn false
+                mIL.MarkLabel(before_False);
                 var afterResult = mIL.DeclareLocal(currentMthod.ReturnType);
                 mIL.Emit(OpCodes.Stloc, afterResult);
                 mIL.Emit(OpCodes.Ldloc, afterContext);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("get_Result"), null);
 
                 mIL.MarkLabel(before_Ret);
+
+                //check update return data ExceptionContext
+                var ex_False = mIL.DefineLabel();
+                var ex_Ret = mIL.DefineLabel();
+                mIL.Emit(OpCodes.Ldloc, exceptionContext);
+                mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod("get_IsReturn"), null);
+                mIL.Emit(OpCodes.Brfalse, ex_False);
+
+                //exceptionContext IsReturn true 
+                var exceptionResult = mIL.DeclareLocal(currentMthod.ReturnType);
+                mIL.Emit(OpCodes.Stloc, exceptionResult);
+                mIL.Emit(OpCodes.Ldloc, exceptionContext);
+                mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod("get_Result"), null);
+                mIL.Emit(OpCodes.Br, ex_Ret);
+
+                //exceptionContext IsReturn false 
+                mIL.MarkLabel(ex_False);
+                //...
+
+                mIL.MarkLabel(ex_Ret);
 
                 mIL.Emit(OpCodes.Ret);
             }

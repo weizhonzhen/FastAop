@@ -14,6 +14,8 @@ namespace FastAop
 
         public Exception Exception { get; set; }
 
+        public bool IsReturn { get; set; }
+
         public object Result { get; set; }
     }
 }
