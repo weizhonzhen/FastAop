@@ -40,7 +40,7 @@ public class LogAop : FastAopAttribute
     public override void Before(BeforeContext context)
     {
         context.IsReturn = true;
-        context.Result = Result; //update result data 
+        context.Result = "update result test"; //update result data 
     }
 
     public override void Exception(ExceptionContext exception)
