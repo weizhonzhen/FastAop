@@ -74,8 +74,8 @@ public class Log1Aop : FastAopAttribute
 Test
 ```csharp
 var model = services.BuildServiceProvider().GetRequiredService<ITestAop>();
-model.Test1("1", "3");  //result data is "update result test"
-model.Test1("2", "4"); //result data is "update result test"
+model.Test1("1", "3");  //result data is "update result Exception"
+model.Test1("2", "4"); //result data is "update result Exception"
  ```
 # FastAop
 nuget url: https://www.nuget.org/packages/FastAop/
