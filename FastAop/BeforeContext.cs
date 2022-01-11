@@ -12,5 +12,8 @@ namespace FastAop
 
         public string MethodName { get; set; }
 
+        public bool IsReturn { get; set; }
+
+        public object Result { get; set; }
     }
 }

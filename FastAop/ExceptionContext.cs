@@ -13,5 +13,7 @@ namespace FastAop
         public string MethodName { get; set; }
 
         public Exception Exception { get; set; }
+
+        public object Result { get; set; }
     }
 }
