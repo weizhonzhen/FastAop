@@ -35,12 +35,12 @@ public class LogAop : FastAopAttribute
     public override void After(AfterContext context)
     {
         context.Result = "update result test"; //update result data
-        //throw new NotImplementedException();
     }
 
     public override void Before(BeforeContext context)
     {
-        //throw new NotImplementedException();
+        context.IsReturn = true;
+        context.Result = Result; //update result data 
     }
 
     public override void Exception(ExceptionContext exception)
