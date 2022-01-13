@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace FastAop
+﻿namespace FastAop
 {
     public class BeforeContext
     {
@@ -15,5 +13,7 @@ namespace FastAop
         public bool IsReturn { get; set; }
 
         public object Result { get; set; }
+
+        public string[] AttributeName { get; set; } 
     }
 }

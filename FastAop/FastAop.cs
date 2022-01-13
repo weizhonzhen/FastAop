@@ -101,6 +101,21 @@ namespace FastAop
                     mIL.Emit(OpCodes.Stelem_Ref);
                 }
 
+                //AttributeName
+                var attList = serviceType.GetMethod(currentMthod.Name, mTypes).GetCustomAttributes().ToList().Select(a => a.GetType().Name).ToArray();
+                var AttributeName = mIL.DeclareLocal(typeof(string[]));
+                mIL.Emit(OpCodes.Ldc_I4, attList.Length);
+                mIL.Emit(OpCodes.Newarr, typeof(string));
+                mIL.Emit(OpCodes.Stloc, AttributeName);
+
+                for (int t = 0; t < attList.Length; t++)
+                {
+                    mIL.Emit(OpCodes.Ldloc, AttributeName);
+                    mIL.Emit(OpCodes.Ldc_I4, t);
+                    mIL.Emit(OpCodes.Ldstr, attList[t]);
+                    mIL.Emit(OpCodes.Stelem_Ref);
+                }
+
                 //DeclareContext Paramter
                 var beforeContext = mIL.DeclareLocal(typeof(BeforeContext));
                 mIL.Emit(OpCodes.Newobj, typeof(BeforeContext).GetConstructor(Type.EmptyTypes));
@@ -128,6 +143,11 @@ namespace FastAop
                 mIL.Emit(OpCodes.Ldloc, beforeContext);
                 mIL.Emit(OpCodes.Ldstr, currentMthod.Name);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod("set_MethodName"), new[] { typeof(string) });
+
+                //BeforeContext AttributeName
+                mIL.Emit(OpCodes.Ldloc, beforeContext);
+                mIL.Emit(OpCodes.Ldloc, AttributeName);
+                mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod("set_AttributeName"), new[] { typeof(string[]) });
 
                 //Declare AfterContext
                 var afterContext = mIL.DeclareLocal(typeof(AfterContext));
@@ -157,10 +177,20 @@ namespace FastAop
                 mIL.Emit(OpCodes.Ldstr, currentMthod.Name);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("set_MethodName"), new[] { typeof(string) });
 
+                //AfterContext AttributeName
+                mIL.Emit(OpCodes.Ldloc, afterContext);
+                mIL.Emit(OpCodes.Ldloc, AttributeName);
+                mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("set_AttributeName"), new[] { typeof(string[]) });
+
                 //Declare ExceptionContext
                 var exceptionContext = mIL.DeclareLocal(typeof(ExceptionContext));
                 mIL.Emit(OpCodes.Newobj, typeof(ExceptionContext).GetConstructor(Type.EmptyTypes));
                 mIL.Emit(OpCodes.Stloc, exceptionContext);
+
+                //ExceptionContext AttributeName
+                mIL.Emit(OpCodes.Ldloc, exceptionContext);
+                mIL.Emit(OpCodes.Ldloc, AttributeName);
+                mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod("set_AttributeName"), new[] { typeof(string[]) });
 
                 //aop attr
                 var aopAttrType = typeof(FastAopAttribute);
