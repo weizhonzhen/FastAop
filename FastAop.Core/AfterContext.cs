@@ -11,5 +11,7 @@
         public string MethodName { get; set; }
 
         public object Result { get; set; }
+
+        public string[] AttributeName { get; set; }
     }
 }
