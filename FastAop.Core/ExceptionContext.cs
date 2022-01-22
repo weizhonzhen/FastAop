@@ -19,5 +19,7 @@ namespace FastAop.Core
         public object Result { get; set; }
 
         public string[] AttributeName { get; set; }
+
+        public string ResultType { get; set; }
     }
 }
