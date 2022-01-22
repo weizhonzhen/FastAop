@@ -149,6 +149,11 @@ namespace FastAop
                 mIL.Emit(OpCodes.Ldloc, AttributeName);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod("set_AttributeName"), new[] { typeof(string[]) });
 
+                //BeforeContext ResultType
+                mIL.Emit(OpCodes.Ldloc, beforeContext);
+                mIL.Emit(OpCodes.Ldstr, currentMthod.ReturnType.ToString());
+                mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod("set_ResultType"), new[] { typeof(string) });
+
                 //Declare AfterContext
                 var afterContext = mIL.DeclareLocal(typeof(AfterContext));
                 mIL.Emit(OpCodes.Newobj, typeof(AfterContext).GetConstructor(Type.EmptyTypes));
@@ -182,6 +187,11 @@ namespace FastAop
                 mIL.Emit(OpCodes.Ldloc, AttributeName);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("set_AttributeName"), new[] { typeof(string[]) });
 
+                //AfterContext ResultType
+                mIL.Emit(OpCodes.Ldloc, afterContext);
+                mIL.Emit(OpCodes.Ldstr, currentMthod.ReturnType.ToString());
+                mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("set_ResultType"), new[] { typeof(string) });
+
                 //Declare ExceptionContext
                 var exceptionContext = mIL.DeclareLocal(typeof(ExceptionContext));
                 mIL.Emit(OpCodes.Newobj, typeof(ExceptionContext).GetConstructor(Type.EmptyTypes));
@@ -191,6 +201,11 @@ namespace FastAop
                 mIL.Emit(OpCodes.Ldloc, exceptionContext);
                 mIL.Emit(OpCodes.Ldloc, AttributeName);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod("set_AttributeName"), new[] { typeof(string[]) });
+
+                //ExceptionContext ResultType
+                mIL.Emit(OpCodes.Ldloc, exceptionContext);
+                mIL.Emit(OpCodes.Ldstr, currentMthod.ReturnType.ToString());
+                mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod("set_ResultType"), new[] { typeof(string) });
 
                 //aop attr
                 var aopAttrType = typeof(FastAopAttribute);
