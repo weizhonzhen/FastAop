@@ -143,8 +143,8 @@ namespace FastAop.Core
                 mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod("set_AttributeName"), new[] { typeof(string[]) });
 
                 //BeforeContext ResultType
-                mIL.Emit(OpCodes.Ldloc, beforeContext);
-                mIL.Emit(OpCodes.Ldstr, currentMthod.ReturnType.ToString());
+                mIL.Emit(OpCodes.Ldloc, beforeContext); 
+                mIL.Emit(OpCodes.Ldstr, currentMthod.ReturnType.AssemblyQualifiedName);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod("set_ResultType"), new[] { typeof(string) });
 
                 //Declare AfterContext
@@ -182,7 +182,7 @@ namespace FastAop.Core
 
                 //AfterContext ResultType
                 mIL.Emit(OpCodes.Ldloc, afterContext);
-                mIL.Emit(OpCodes.Ldstr, currentMthod.ReturnType.ToString());
+                mIL.Emit(OpCodes.Ldstr, currentMthod.ReturnType.AssemblyQualifiedName);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("set_ResultType"), new[] { typeof(string) });
 
                 //Declare ExceptionContext
@@ -197,7 +197,7 @@ namespace FastAop.Core
 
                 //ExceptionContext ResultType
                 mIL.Emit(OpCodes.Ldloc, exceptionContext);
-                mIL.Emit(OpCodes.Ldstr, currentMthod.ReturnType.ToString());
+                mIL.Emit(OpCodes.Ldstr, currentMthod.ReturnType.AssemblyQualifiedName);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod("set_ResultType"), new[] { typeof(string) });
 
                 //aop attr
