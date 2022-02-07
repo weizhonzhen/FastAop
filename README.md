@@ -5,14 +5,31 @@ in Startup.cs Startup mothod
 ```csharp
 //more aop by 
 services.AddFastAop("FastAop.Core.Test");
+services.AddFastAopDyn("FastAop.Core.Test");
 
 //add Global aop
 services.AddFastAop("FastAop.Core.Test",typeof(LogAop));
+services.AddFastAopDyn("FastAop.Core.Test",typeof(LogAop));
 
 //one aop
 var model = FastAop.Instance<TestAop, ITestAop>();
+dynamic model = FastAop.Instance(typeof(Test_Aop));
+
 
 public class TestAop : ITestAop
+{
+    [Log1Aop(Sort = 1)]
+    [LogAop(Sort = 2)]
+    public string Test1(string a, string b)
+    {
+        int ae = 0;
+        a += "_b";
+        var ad = 9 / ae;
+        return a;
+    }
+}
+
+public class Test_Aop
 {
     [Log1Aop(Sort = 1)]
     [LogAop(Sort = 2)]
@@ -74,6 +91,10 @@ public class Log1Aop : FastAopAttribute
 Test
 ```csharp
 var model = services.BuildServiceProvider().GetRequiredService<ITestAop>();
+model.Test1("1", "3");  //result data is "update result Exception"
+model.Test1("2", "4"); //result data is "update result Exception"
+
+dynamic model = services.BuildServiceProvider().GetService(typeof(Test_Aop));//not interface class
 model.Test1("1", "3");  //result data is "update result Exception"
 model.Test1("2", "4"); //result data is "update result Exception"
  ```
