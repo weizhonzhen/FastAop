@@ -5,11 +5,9 @@ in Startup.cs Startup mothod
 ```csharp
 //more aop by 
 services.AddFastAop("FastAop.Core.Test");
-services.AddFastAopDyn("FastAop.Core.Test");//not interface class
 
 //add Global aop
 services.AddFastAop("FastAop.Core.Test",typeof(LogAop));
-services.AddFastAopDyn("FastAop.Core.Test",typeof(LogAop));//not interface class
 
 //one aop
 var model = FastAop.Instance<TestAop, ITestAop>();
