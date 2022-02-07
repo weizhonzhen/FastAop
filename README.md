@@ -92,7 +92,7 @@ var model = services.BuildServiceProvider().GetRequiredService<ITestAop>();
 model.Test1("1", "3");  //result data is "update result Exception"
 model.Test1("2", "4"); //result data is "update result Exception"
 
-dynamic model = services.BuildServiceProvider().GetService(typeof(Test_Aop));//not interface class
+dynamic model = FastAopContext.Resolve<Test_Aop>();//not interface class
 model.Test1("1", "3");  //result data is "update result Exception"
 model.Test1("2", "4"); //result data is "update result Exception"
  ```
