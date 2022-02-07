@@ -390,6 +390,10 @@ namespace FastAop.Core
 
         private static DynamicMethod ProxyDyn(Type serviceType, Type attrType = null)
         {
+#if NETFRAMEWORK
+                 throw new Exception("FastAop.Core not support net framwork");
+#endif
+
             if (serviceType.IsInterface)
                 throw new Exception($"serviceType not Interface class,class name:{serviceType.Name}");
 
