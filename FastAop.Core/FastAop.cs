@@ -378,7 +378,7 @@ namespace FastAop.Core
             return dynMethod;
         }
 
-        internal static object Instance(Type attrType, Type serviceType, Type interfaceType)
+        internal static object Instance(Type serviceType, Type interfaceType, Type attrType)
         {
             return Proxy(serviceType, interfaceType, attrType).CreateDelegate(Expression.GetFuncType(new Type[] { interfaceType })).DynamicInvoke();
         }
