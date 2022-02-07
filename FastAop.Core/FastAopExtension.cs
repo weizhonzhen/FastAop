@@ -1,4 +1,5 @@
 ﻿using FastAop.Core;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
 using System.Reflection;
@@ -7,6 +8,8 @@ namespace Microsoft.Extensions.DependencyInjection
 {
     public static class FastAopExtension
     {
+        internal static IServiceProvider serviceProvider;
+
         public static IServiceCollection AddFastAop(this IServiceCollection serviceCollection, string NamespaceService)
         {
             if (!string.IsNullOrEmpty(NamespaceService))
@@ -29,12 +32,12 @@ namespace Microsoft.Extensions.DependencyInjection
                             if (m.GetCustomAttributes().ToList().Exists(a => a.GetType().BaseType == typeof(FastAopAttribute)))
                                 isServiceAttr = true;
                         });
-                         
+
                         if (!b.IsInterface && b.GetInterfaces().Any() && isServiceAttr)
                             serviceCollection.AddSingleton(b.GetInterfaces().First(), FastAop.Core.FastAop.Instance(b, b.GetInterfaces().First()).GetType());
                         else if (!b.IsInterface && b.GetInterfaces().Any())
                             serviceCollection.AddTransient(b.GetInterfaces().First(), b);
-                        else if(!b.IsInterface && !b.GetInterfaces().Any() && isServiceAttr)
+                        else if (!b.IsInterface && !b.GetInterfaces().Any() && isServiceAttr)
                             serviceCollection.AddTransient(b, s => { return FastAop.Core.FastAop.InstanceDyn(b); });
                         else if (!b.IsInterface && !b.GetInterfaces().Any())
                             serviceCollection.AddTransient(b, s => { return Activator.CreateInstance(b); });
@@ -47,7 +50,7 @@ namespace Microsoft.Extensions.DependencyInjection
 
         public static IServiceCollection AddFastAop(this IServiceCollection serviceCollection, string NamespaceService, Type aopType)
         {
-            if(aopType.BaseType != typeof(FastAopAttribute))
+            if (aopType.BaseType != typeof(FastAopAttribute))
                 throw new Exception($"aopType class not is FastAopAttribute,class name:{aopType.Name}");
 
             if (!string.IsNullOrEmpty(NamespaceService))
@@ -64,13 +67,28 @@ namespace Microsoft.Extensions.DependencyInjection
                     {
                         if (!b.IsInterface && b.GetInterfaces().Any())
                             serviceCollection.AddSingleton(b.GetInterfaces().First(), FastAop.Core.FastAop.Instance(b, b.GetInterfaces().First(), aopType).GetType());
-                        else if(!b.IsInterface && !b.GetInterfaces().Any())
-                            serviceCollection.AddSingleton(b, s => { return FastAop.Core.FastAop.InstanceDyn(b, aopType); });                       
+                        else if (!b.IsInterface && !b.GetInterfaces().Any())
+                            serviceCollection.AddSingleton(b, s => { return FastAop.Core.FastAop.InstanceDyn(b, aopType); });
                     });
                 });
             }
 
+            serviceProvider = serviceCollection.BuildServiceProvider();
             return serviceCollection;
+        }
+    }
+}
+
+namespace FastAop.Core
+{
+    public class FastAopContext
+    {
+        public static dynamic Resolve<T>()
+        {
+            if (!typeof(T).GetInterfaces().Any())
+                return FastAopExtension.serviceProvider.GetService(typeof(T));
+            else
+                return FastAopExtension.serviceProvider.GetService<T>();
         }
     }
 }
