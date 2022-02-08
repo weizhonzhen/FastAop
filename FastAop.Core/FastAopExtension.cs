@@ -45,6 +45,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 });
             }
 
+            serviceProvider = serviceCollection.BuildServiceProvider();
             return serviceCollection;
         }
 
