@@ -216,9 +216,12 @@ Test
 var model = (ITestAop)FastAop.Instance(typeof(TestAop), typeof(ITestAop));
 or
 var model = FastAop.Instance<TestAop, ITestAop>();
+    
+dynamic test = FastAop.InstanceDyn(typeof(Test_Aop),typeof(LogAop));
 
 //aotuo add aop
 var model = (ITestAop)FastAop.AddAttribute(typeof(LogAop), typeof(TestAop), typeof(ITestAop));
 model.Test1("1", "3"); //result data is "update result Exception"
 model.Test1("2", "4"); //result data is "update result Exception"
+test..Test1("2", "4"); // not  interface class
 ```
