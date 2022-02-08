@@ -383,7 +383,7 @@ namespace FastAop.Core
             return Proxy(serviceType, interfaceType, attrType).CreateDelegate(Expression.GetFuncType(new Type[] { interfaceType })).DynamicInvoke();
         }
 
-        public static dynamic InstanceDyn(Type serviceType, Type attrType = null)
+        public static object InstanceDyn(Type serviceType, Type attrType = null)
         {
             return ProxyDyn(serviceType,attrType).CreateDelegate(Expression.GetFuncType(new Type[] { serviceType })).DynamicInvoke();
         }
@@ -400,7 +400,8 @@ namespace FastAop.Core
             var assemblyName = new AssemblyName("FastAop.ILGrator.Core");
             var assembly = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
             var module = assembly.DefineDynamicModule(assemblyName.Name);
-            var builder = module.DefineType($"Aop_{assemblyName}", TypeAttributes.Public, null);
+            //var builder = module.DefineType($"Aop_{assemblyName}", TypeAttributes.Public, null);
+            var builder = module.DefineType($"Aop_{assemblyName}", TypeAttributes.Public, serviceType, new Type[0]);
 
             //Constructor method
             var field = builder.DefineField($"Aop_{serviceType.Name}_Field", serviceType, FieldAttributes.Private);
