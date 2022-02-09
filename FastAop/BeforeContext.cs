@@ -19,6 +19,6 @@ namespace FastAop
 
         public string[] AttributeName { get; set; }
 
-        public object ResultType { get { return Method.ReturnType; } }
+        public Type ResultType { get { return Method.ReturnType; } }
     }
 }
