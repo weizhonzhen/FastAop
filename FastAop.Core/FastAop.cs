@@ -40,6 +40,9 @@ namespace FastAop.Core
             if (serviceType.IsInterface)
                 throw new Exception($"serviceType not Interface class,class name:{serviceType.Name}");
 
+            if (serviceType.GetConstructor(Type.EmptyTypes) == null)
+                throw new Exception($"serviceType class have Constructor Paramtes not support,class name:{serviceType.Name}");
+
             var assemblyName = new AssemblyName("FastAop.ILGrator.Core");
             var assembly = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
             var module = assembly.DefineDynamicModule(assemblyName.Name);
@@ -354,6 +357,10 @@ namespace FastAop.Core
 #if NETFRAMEWORK
                  throw new Exception("FastAop.Core not support net framwork");
 #endif
+
+
+            if (serviceType.GetConstructor(Type.EmptyTypes) == null)
+                throw new Exception($"serviceType class have Constructor Paramtes not support,class name:{serviceType.Name}");
 
             if (serviceType.IsInterface)
                 throw new Exception($"serviceType not Interface class,class name:{serviceType.Name}");

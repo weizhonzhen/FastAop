@@ -33,6 +33,9 @@ namespace Microsoft.Extensions.DependencyInjection
                                 isServiceAttr = true;
                         });
 
+                        if (b.IsAbstract && b.IsSealed)
+                            return;
+
                         if (!b.IsInterface && b.GetInterfaces().Any() && isServiceAttr)
                             serviceCollection.AddSingleton(b.GetInterfaces().First(), FastAop.Core.FastAop.Instance(b, b.GetInterfaces().First()).GetType());
                         else if (!b.IsInterface && b.GetInterfaces().Any())
@@ -66,6 +69,9 @@ namespace Microsoft.Extensions.DependencyInjection
                 {
                     assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace == NamespaceService).ToList().ForEach(b =>
                     {
+                        if (b.IsAbstract && b.IsSealed)
+                            return;
+
                         if (!b.IsInterface && b.GetInterfaces().Any())
                             serviceCollection.AddSingleton(b.GetInterfaces().First(), FastAop.Core.FastAop.Instance(b, b.GetInterfaces().First(), aopType).GetType());
                         else if (!b.IsInterface && !b.GetInterfaces().Any())
