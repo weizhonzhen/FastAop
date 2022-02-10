@@ -48,6 +48,12 @@ namespace FastAop
             if (serviceType.IsInterface)
                 throw new Exception($"serviceType not Interface class,class name:{serviceType.Name}");
 
+            if (serviceType.IsAbstract && serviceType.IsSealed)
+                throw new Exception($"serviceType class is static class not support,class name:{serviceType.Name}");
+
+            if (serviceType.GetConstructor(Type.EmptyTypes) == null)
+                throw new Exception($"serviceType class have Constructor Paramtes not support,class name:{serviceType.Name}");
+
             var assemblyName = new AssemblyName("FastAop.ILGrator");
             var assembly = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
             var module = assembly.DefineDynamicModule(assemblyName.Name);
@@ -351,10 +357,22 @@ namespace FastAop
             return ProxyDyn(serviceType, attrType).CreateDelegate(Expression.GetFuncType(new Type[] { serviceType })).DynamicInvoke();
         }
 
+        public static dynamic InstanceDyn<T>(Type attrType = null)
+        {
+            var serviceType = typeof(T);
+            return ProxyDyn(serviceType, attrType).CreateDelegate(Expression.GetFuncType(new Type[] { serviceType })).DynamicInvoke();
+        }
+
         private static DynamicMethod ProxyDyn(Type serviceType, Type attrType = null)
         {
             if (serviceType.IsInterface)
                 throw new Exception($"serviceType not Interface class,class name:{serviceType.Name}");
+
+            if (serviceType.IsAbstract && serviceType.IsSealed)
+                throw new Exception($"serviceType class is static class not support,class name:{serviceType.Name}");
+
+            if (serviceType.GetConstructor(Type.EmptyTypes) == null)
+                throw new Exception($"serviceType class have Constructor Paramtes not support,class name:{serviceType.Name}");
 
             var assemblyName = new AssemblyName("FastAop.ILGrator.Core");
             var assembly = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
@@ -373,7 +391,7 @@ namespace FastAop
             cIL.Emit(OpCodes.Stfld, field);
             cIL.Emit(OpCodes.Ret);
 
-            var listMethod = serviceType.GetMethods(BindingFlags.SuppressChangeType | BindingFlags.Instance | BindingFlags.Public);
+            var listMethod = serviceType.GetMethods(BindingFlags.SuppressChangeType | BindingFlags.Instance | BindingFlags.Public );
 
             //method list
             for (int m = 0; m < listMethod.Length; m++)
