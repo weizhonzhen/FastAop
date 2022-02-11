@@ -189,9 +189,8 @@ namespace FastAop
                 var exceptionMethod = aopAttrType.GetMethod("Exception");
                 var aopAttribute = new List<FastAopAttribute>();
 
-                if (attrType == null)
-                    aopAttribute = serviceType.GetMethod(currentMthod.Name, mTypes).GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToList();
-                else
+                aopAttribute = serviceType.GetMethod(currentMthod.Name, mTypes).GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToList();
+                if (attrType != null)
                 {
                     //auto add FastAopAttribute
                     var classCtorInfo = attrType.GetConstructor(Type.EmptyTypes);
@@ -514,9 +513,8 @@ namespace FastAop
                 var afterMethod = aopAttrType.GetMethod("After");
                 var exceptionMethod = aopAttrType.GetMethod("Exception");
 
-                if (attrType == null)
-                    aopAttribute = serviceType.GetMethod(currentMthod.Name, mTypes).GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToList();
-                else
+                aopAttribute = serviceType.GetMethod(currentMthod.Name, mTypes).GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToList();
+                if (attrType != null)
                 {
                     //auto add FastAopAttribute
                     var classCtorInfo = attrType.GetConstructor(Type.EmptyTypes);
