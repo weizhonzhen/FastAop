@@ -67,6 +67,8 @@ namespace Microsoft.Extensions.DependencyInjection
 
                 AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(assembly =>
                 {
+                    if (assembly.IsDynamic)
+                        return;
                     assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace == NamespaceService).ToList().ForEach(b =>
                     {
                         if (b.IsAbstract && b.IsSealed)
