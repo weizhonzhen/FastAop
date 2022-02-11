@@ -9,6 +9,40 @@ namespace FastAop
 {
     public static class FastAop
     {
+        internal static Dictionary<Type,object> _types = new Dictionary<Type, object>();
+        internal static Dictionary<Type, dynamic> _typesDyn = new Dictionary<Type, dynamic>();
+
+        public static void Init(string nameSpaceService, Type aopType)
+        {
+            if (aopType.BaseType != typeof(FastAopAttribute))
+                throw new Exception($"aopType class not is FastAopAttribute,class name:{aopType.Name}");
+
+            if (!string.IsNullOrEmpty(nameSpaceService))
+            {
+                Assembly.GetCallingAssembly().GetReferencedAssemblies().ToList().ForEach(a =>
+                {
+                    if (!AppDomain.CurrentDomain.GetAssemblies().ToList().Exists(b => b.GetName().Name == a.Name))
+                        try { Assembly.Load(a.Name); } catch (Exception) { }
+                });
+
+                AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(assembly =>
+                {
+                    if (assembly.IsDynamic)
+                        return;
+                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace == nameSpaceService).ToList().ForEach(b =>
+                    {
+                        if (b.IsAbstract && b.IsSealed)
+                            return;
+
+                        if (!b.IsInterface && b.GetInterfaces().Any())
+                            _types.SetValue(b.GetInterfaces().First(), FastAop.Instance(b, b.GetInterfaces().First(), aopType));
+                        else if (!b.IsInterface && !b.GetInterfaces().Any())
+                            Dic.SetValueDyn(_typesDyn, b, FastAop.InstanceDyn(b, aopType));
+                    });
+                });
+            }
+        }
+
         public static object Instance(Type serviceType, Type interfaceType)
         {
             return Proxy(serviceType, interfaceType).CreateDelegate(Expression.GetFuncType(new Type[] { interfaceType })).DynamicInvoke();
@@ -108,7 +142,7 @@ namespace FastAop
                 }
 
                 //AttributeName
-                var attList = serviceType.GetMethod(currentMthod.Name, mTypes).GetCustomAttributes().ToList().Select(a => a.GetType().Name).ToArray();
+                var attList = (serviceType.GetMethod(currentMthod.Name, mTypes)?.GetCustomAttributes().ToList().Select(a => a.GetType().Name).ToList()?? new List<string>()).ToArray() ;
                 var AttributeName = mIL.DeclareLocal(typeof(string[]));
                 mIL.Emit(OpCodes.Ldc_I4, attList.Length);
                 mIL.Emit(OpCodes.Newarr, typeof(string));
@@ -189,7 +223,7 @@ namespace FastAop
                 var exceptionMethod = aopAttrType.GetMethod("Exception");
                 var aopAttribute = new List<FastAopAttribute>();
 
-                aopAttribute = serviceType.GetMethod(currentMthod.Name, mTypes).GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToList();
+                aopAttribute = serviceType.GetMethod(currentMthod.Name, mTypes)?.GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToList() ?? new List<FastAopAttribute>();
                 if (attrType != null)
                 {
                     //auto add FastAopAttribute
@@ -672,6 +706,96 @@ namespace FastAop
             dynIL.Emit(OpCodes.Ret);
 
             return dynMethod;
+        }
+    }
+
+    public class FastAopContext
+    {
+        public static T Resolve<T>()
+        {
+            if (typeof(T).IsInterface)
+                return (T)FastAop._types.GetValue(typeof(T));
+            else
+                return (T)Activator.CreateInstance(typeof(T));
+        }
+
+        public static dynamic ResolveDyn<T>()
+        {
+            if (!typeof(T).GetInterfaces().Any())
+                return FastAop._typesDyn.GetValue(typeof(T));
+            else
+                return null;
+        }
+    }
+}
+
+
+namespace System.Collections.Generic
+{
+    internal static class Dic
+    {
+        internal static Object GetValue(this Dictionary<Type, object> item, Type key)
+        {
+            if (key == null)
+                return null;
+
+            if (item == null)
+                return null;
+
+            key = item.Keys.ToList().Find(a => a == key);
+
+            if (item.Keys.ToList().Exists(a => a == key))
+                return item[key];
+            else
+                return null;
+        }
+
+        internal static Dictionary<Type, object> SetValue(this Dictionary<Type, object> item, Type key, object value)
+        {
+            if (key == null)
+                return null;
+
+            if (item == null)
+                return null;
+
+            if (item.Keys.ToList().Exists(a => a == key))
+                item[key] = value;
+            else
+                item.Add(key, value);
+
+            return item;
+        }
+
+        internal static Object GetValueDyn(this Dictionary<Type, dynamic> item, Type key)
+        {
+            if (key == null)
+                return null;
+
+            if (item == null)
+                return null;
+
+            key = item.Keys.ToList().Find(a => a == key);
+
+            if (item.Keys.ToList().Exists(a => a == key))
+                return item[key];
+            else
+                return null;
+        }
+
+        internal static Dictionary<Type, dynamic> SetValueDyn(Dictionary<Type, dynamic> item, Type key, dynamic value)
+        {
+            if (key == null)
+                return null;
+
+            if (item == null)
+                return null;
+
+            if (item.Keys.ToList().Exists(a => a == key))
+                item[key] = value;
+            else
+                item.Add(key, value);
+
+            return item;
         }
     }
 }
