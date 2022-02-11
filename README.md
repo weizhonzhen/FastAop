@@ -191,6 +191,12 @@ nuget url: https://www.nuget.org/packages/FastAop/
 
 Test
 ```csharp
+FastAop.Init("FastAop.Test", typeof(LogAop));
+
+var model = FastAopContext.Resolve<TestAop>();
+or
+var model = FastAopContext.ResolveDyn<TestAop>();//not interface class
+or
 var model = (ITestAop)FastAop.Instance(typeof(TestAop), typeof(ITestAop));
 or
 var model = FastAop.Instance<TestAop, ITestAop>();
