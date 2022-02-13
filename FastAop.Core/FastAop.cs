@@ -382,7 +382,7 @@ namespace FastAop.Core
             cIL.Emit(OpCodes.Stfld, field);
             cIL.Emit(OpCodes.Ret);
 
-            var listMethod = serviceType.GetMethods(BindingFlags.SuppressChangeType | BindingFlags.Instance | BindingFlags.Public);
+            var listMethod = serviceType.GetMethods(BindingFlags.SuppressChangeType | BindingFlags.Instance | BindingFlags.Public|BindingFlags.Static);
 
             //method list
             for (int m = 0; m < listMethod.Length; m++)
@@ -538,7 +538,14 @@ namespace FastAop.Core
                 {
                     mIL.Emit(OpCodes.Ldarg, t + 1);
                 }
-                mIL.Emit(OpCodes.Callvirt, currentMthod);
+
+                if (currentMthod.IsStatic)
+                {
+                    mIL.Emit(OpCodes.Ldftn, currentMthod);
+                    mIL.EmitCalli(OpCodes.Calli, CallingConventions.Standard, currentMthod.ReturnType, mTypes, null);
+                }
+                else
+                    mIL.Emit(OpCodes.Callvirt, currentMthod);
 
                 //method ReturnData
                 LocalBuilder returnData = null;
