@@ -43,6 +43,34 @@ namespace FastAop
             }
         }
 
+        public static void Init(string nameSpaceService)
+        {
+            if (!string.IsNullOrEmpty(nameSpaceService))
+            {
+                Assembly.GetCallingAssembly().GetReferencedAssemblies().ToList().ForEach(a =>
+                {
+                    if (!AppDomain.CurrentDomain.GetAssemblies().ToList().Exists(b => b.GetName().Name == a.Name))
+                        try { Assembly.Load(a.Name); } catch (Exception) { }
+                });
+
+                AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(assembly =>
+                {
+                    if (assembly.IsDynamic)
+                        return;
+                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace == nameSpaceService).ToList().ForEach(b =>
+                    {
+                        if (b.IsAbstract && b.IsSealed)
+                            return;
+
+                        if (!b.IsInterface && b.GetInterfaces().Any())
+                            _types.SetValue(b.GetInterfaces().First(), FastAop.Instance(b, b.GetInterfaces().First()));
+                        else if (!b.IsInterface && !b.GetInterfaces().Any())
+                            Dic.SetValueDyn(_typesDyn, b, FastAop.InstanceDyn(b));
+                    });
+                });
+            }
+        }
+
         public static object Instance(Type serviceType, Type interfaceType)
         {
             return Proxy(serviceType, interfaceType).CreateDelegate(Expression.GetFuncType(new Type[] { interfaceType })).DynamicInvoke();
@@ -258,6 +286,7 @@ namespace FastAop
                 {
                     mIL.Emit(OpCodes.Ldarg, t + 1);
                 }
+
                 mIL.Emit(OpCodes.Callvirt, currentMthod);
 
                 //method ReturnData
@@ -424,7 +453,7 @@ namespace FastAop
             cIL.Emit(OpCodes.Stfld, field);
             cIL.Emit(OpCodes.Ret);
 
-            var listMethod = serviceType.GetMethods(BindingFlags.SuppressChangeType | BindingFlags.Instance | BindingFlags.Public );
+            var listMethod = serviceType.GetMethods(BindingFlags.SuppressChangeType | BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static );
 
             //method list
             for (int m = 0; m < listMethod.Length; m++)
@@ -580,7 +609,14 @@ namespace FastAop
                 {
                     mIL.Emit(OpCodes.Ldarg, t + 1);
                 }
-                mIL.Emit(OpCodes.Callvirt, currentMthod);
+
+                if (currentMthod.IsStatic)
+                {
+                    mIL.Emit(OpCodes.Ldftn, currentMthod);
+                    mIL.EmitCalli(OpCodes.Calli, CallingConventions.Standard, currentMthod.ReturnType, mTypes, null);
+                }
+                else
+                    mIL.Emit(OpCodes.Callvirt, currentMthod);
 
                 //method ReturnData
                 LocalBuilder returnData = null;
