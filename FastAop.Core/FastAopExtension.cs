@@ -10,9 +10,9 @@ namespace Microsoft.Extensions.DependencyInjection
     {
         internal static IServiceProvider serviceProvider;
 
-        public static IServiceCollection AddFastAop(this IServiceCollection serviceCollection, string NamespaceService)
+        public static IServiceCollection AddFastAop(this IServiceCollection serviceCollection, string nameSpaceService)
         {
-            if (!string.IsNullOrEmpty(NamespaceService))
+            if (!string.IsNullOrEmpty(nameSpaceService))
             {
                 Assembly.GetCallingAssembly().GetReferencedAssemblies().ToList().ForEach(a =>
                 {
@@ -24,7 +24,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 {
                     if (assembly.IsDynamic)
                         return;
-                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace == NamespaceService).ToList().ForEach(b =>
+                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace == nameSpaceService).ToList().ForEach(b =>
                     {
                         var isServiceAttr = false;
                         b.GetMethods().ToList().ForEach(m =>
@@ -37,13 +37,13 @@ namespace Microsoft.Extensions.DependencyInjection
                             return;
 
                         if (!b.IsInterface && b.GetInterfaces().Any() && isServiceAttr)
-                            serviceCollection.AddSingleton(b.GetInterfaces().First(), FastAop.Core.FastAop.Instance(b, b.GetInterfaces().First()).GetType());
+                            serviceCollection.AddScoped(b.GetInterfaces().First(), FastAop.Core.FastAop.Instance(b, b.GetInterfaces().First()).GetType());
                         else if (!b.IsInterface && b.GetInterfaces().Any())
-                            serviceCollection.AddTransient(b.GetInterfaces().First(), b);
+                            serviceCollection.AddScoped(b.GetInterfaces().First(), b);
                         else if (!b.IsInterface && !b.GetInterfaces().Any() && isServiceAttr)
-                            serviceCollection.AddTransient(b, s => { return FastAop.Core.FastAop.InstanceDyn(b); });
+                            serviceCollection.AddScoped(b, s => { return FastAop.Core.FastAop.InstanceDyn(b); });
                         else if (!b.IsInterface && !b.GetInterfaces().Any())
-                            serviceCollection.AddTransient(b, s => { return Activator.CreateInstance(b); });
+                            serviceCollection.AddScoped(b, s => { return Activator.CreateInstance(b); });
                     });
                 });
             }
@@ -52,12 +52,12 @@ namespace Microsoft.Extensions.DependencyInjection
             return serviceCollection;
         }
 
-        public static IServiceCollection AddFastAop(this IServiceCollection serviceCollection, string NamespaceService, Type aopType)
+        public static IServiceCollection AddFastAop(this IServiceCollection serviceCollection, string nameSpaceService, Type aopType)
         {
             if (aopType.BaseType != typeof(FastAopAttribute))
                 throw new Exception($"aopType class not is FastAopAttribute,class name:{aopType.Name}");
 
-            if (!string.IsNullOrEmpty(NamespaceService))
+            if (!string.IsNullOrEmpty(nameSpaceService))
             {
                 Assembly.GetCallingAssembly().GetReferencedAssemblies().ToList().ForEach(a =>
                 {
@@ -69,15 +69,15 @@ namespace Microsoft.Extensions.DependencyInjection
                 {
                     if (assembly.IsDynamic)
                         return;
-                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace == NamespaceService).ToList().ForEach(b =>
+                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace == nameSpaceService).ToList().ForEach(b =>
                     {
                         if (b.IsAbstract && b.IsSealed)
                             return;
 
                         if (!b.IsInterface && b.GetInterfaces().Any())
-                            serviceCollection.AddSingleton(b.GetInterfaces().First(), FastAop.Core.FastAop.Instance(b, b.GetInterfaces().First(), aopType).GetType());
+                            serviceCollection.AddScoped(b.GetInterfaces().First(), FastAop.Core.FastAop.Instance(b, b.GetInterfaces().First(), aopType).GetType());
                         else if (!b.IsInterface && !b.GetInterfaces().Any())
-                            serviceCollection.AddSingleton(b, s => { return FastAop.Core.FastAop.InstanceDyn(b, aopType); });
+                            serviceCollection.AddScoped(b, s => { return FastAop.Core.FastAop.InstanceDyn(b, aopType); });
                     });
                 });
             }
