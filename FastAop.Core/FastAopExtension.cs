@@ -1,6 +1,7 @@
 ﻿using FastAop.Core;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
@@ -98,6 +99,22 @@ namespace FastAop.Core
                 return FastAopExtension.serviceProvider.GetService(typeof(T));
             else
                 return FastAopExtension.serviceProvider.GetService<T>();
+        }
+    }
+
+    internal class FastAopCache
+    {
+        private static Dictionary<string,Type> cache = new Dictionary<string, Type>();
+
+        public static Type GetType(string key)
+        {
+            if (cache.ContainsKey(key))
+                return cache[key];
+            else
+            {
+                cache.Add(key, Type.GetType(key));
+                return cache[key];
+            }
         }
     }
 }

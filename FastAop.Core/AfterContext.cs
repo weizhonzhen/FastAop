@@ -11,7 +11,7 @@ namespace FastAop.Core
 
         public string MethodName { get; set; }
 
-        public MethodInfo Method { get { return string.IsNullOrEmpty(ServiceType) ? null : Type.GetType(ServiceType).GetMethod(MethodName); } }
+        public MethodInfo Method { get { return string.IsNullOrEmpty(ServiceType) ? null : FastAopCache.GetType(ServiceType).GetMethod(MethodName); } }
 
         public object Result { get; set; }
 
