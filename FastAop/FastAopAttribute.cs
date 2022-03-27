@@ -14,7 +14,7 @@ namespace FastAop
         public abstract void Exception(ExceptionContext exception);
     }
 
-    public interface IFastAop
+    internal interface IFastAop
     {
         void Before(BeforeContext context);
 
