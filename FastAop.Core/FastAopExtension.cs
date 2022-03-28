@@ -93,10 +93,15 @@ namespace FastAop.Core
 {
     public class FastAopContext
     {
-        public static dynamic Resolve<T>()
+        public static dynamic ResolveDyn<T>()
+        {
+            return FastAopExtension.serviceProvider.GetService(typeof(T));
+        }
+
+        public static T Resolve<T>()
         {
             if (!typeof(T).GetInterfaces().Any())
-                return FastAopExtension.serviceProvider.GetService(typeof(T));
+                return default(T);
             else
                 return FastAopExtension.serviceProvider.GetService<T>();
         }
