@@ -34,6 +34,9 @@ namespace FastAop.Core
 
         private static DynamicMethod Proxy(Type serviceType, Type interfaceType, Type attrType = null)
         {
+            if(!interfaceType.IsPublic)
+                throw new Exception($"interfaceType is not public class,class name:{interfaceType.Name}");
+
             if (!interfaceType.IsInterface)
                 throw new Exception($"interfaceType only Interface class,class name:{interfaceType.Name}");
 
@@ -367,7 +370,6 @@ namespace FastAop.Core
             var assemblyName = new AssemblyName("FastAop.ILGrator.Core");
             var assembly = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
             var module = assembly.DefineDynamicModule(assemblyName.Name);
-            //var builder = module.DefineType($"Aop_{assemblyName}", TypeAttributes.Public, null);
             var builder = module.DefineType($"Aop_{assemblyName}", TypeAttributes.Public, serviceType, new Type[0]);
 
             //Constructor method

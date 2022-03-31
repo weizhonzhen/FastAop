@@ -100,10 +100,10 @@ namespace FastAop.Core
 
         public static T Resolve<T>()
         {
-            if (!typeof(T).GetInterfaces().Any())
-                return default(T);
-            else
+            if (typeof(T).IsInterface)
                 return FastAopExtension.serviceProvider.GetService<T>();
+            else
+                return default(T);
         }
     }
 
