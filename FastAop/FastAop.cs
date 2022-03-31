@@ -104,6 +104,9 @@ namespace FastAop
 
         private static DynamicMethod Proxy(Type serviceType, Type interfaceType, Type attrType = null)
         {
+            if (!interfaceType.IsPublic)
+                throw new Exception($"interfaceType is not public class,class name:{interfaceType.Name}");
+
             if (!interfaceType.IsInterface)
                 throw new Exception($"interfaceType only Interface class,class name:{interfaceType.Name}");
 
