@@ -300,7 +300,7 @@ namespace FastAop
                         mIL.Emit(OpCodes.Box, currentMthod.ReturnType);
 
                     //Declare Method ReturnData
-                    returnData = mIL.DeclareLocal(currentMthod.ReturnType);
+                    returnData = mIL.DeclareLocal(typeof(object));
                     mIL.Emit(OpCodes.Stloc, returnData);
 
                     //Method ReturnData
@@ -629,7 +629,7 @@ namespace FastAop
                         mIL.Emit(OpCodes.Box, currentMthod.ReturnType);
 
                     //Declare Method ReturnData
-                    returnData = mIL.DeclareLocal(currentMthod.ReturnType);
+                    returnData = mIL.DeclareLocal(typeof(object));
                     mIL.Emit(OpCodes.Stloc, returnData);
 
                     //Method ReturnData
