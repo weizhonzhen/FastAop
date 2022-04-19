@@ -28,13 +28,13 @@ namespace FastAop.Core
                 var serviceType = typeof(S);
                 var interfaceType = typeof(I);
 
-                return Proxy(serviceType,interfaceType).CreateDelegate(typeof(Func<I>)) as Func<I>;
+                return Proxy(serviceType, interfaceType).CreateDelegate(typeof(Func<I>)) as Func<I>;
             }
         }
 
         private static DynamicMethod Proxy(Type serviceType, Type interfaceType, Type attrType = null)
         {
-            if(!interfaceType.IsPublic)
+            if (!interfaceType.IsPublic)
                 throw new Exception($"interfaceType is not public class,class name:{interfaceType.Name}");
 
             if (!interfaceType.IsInterface)
@@ -47,7 +47,7 @@ namespace FastAop.Core
                 throw new Exception($"serviceType class have Constructor Paramtes not support,class name:{serviceType.Name}");
 
             var assemblyName = new AssemblyName("FastAop.ILGrator.Core");
-            var assembly = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
+            var assembly = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.RunAndCollect);
             var module = assembly.DefineDynamicModule(assemblyName.Name);
             var builder = module.DefineType($"Aop_{assemblyName}", TypeAttributes.Public, null, new Type[] { interfaceType });
 
@@ -169,7 +169,7 @@ namespace FastAop.Core
                 var exceptionContext = mIL.DeclareLocal(typeof(ExceptionContext));
                 mIL.Emit(OpCodes.Newobj, typeof(ExceptionContext).GetConstructor(Type.EmptyTypes));
                 mIL.Emit(OpCodes.Stloc, exceptionContext);
-                
+
                 //ExceptionContext AttributeName
                 mIL.Emit(OpCodes.Ldloc, exceptionContext);
                 mIL.Emit(OpCodes.Ldloc, AttributeName);
@@ -224,9 +224,11 @@ namespace FastAop.Core
                 {
                     if (currentMthod.ReturnType.IsValueType)
                         mIL.Emit(OpCodes.Box, currentMthod.ReturnType);
+                    else
+                        mIL.Emit(OpCodes.Castclass, currentMthod.ReturnType);
 
                     //Declare Method ReturnData
-                    returnData = mIL.DeclareLocal(currentMthod.ReturnType);
+                    returnData = mIL.DeclareLocal(typeof(object));
                     mIL.Emit(OpCodes.Stloc, returnData);
 
                     //Method ReturnData
@@ -284,10 +286,10 @@ namespace FastAop.Core
                 if (currentMthod.ReturnType != typeof(void))
                     mIL.Emit(OpCodes.Ldloc, returnData);
 
-                if (method.ReturnType.IsValueType)
-                    mIL.Emit(OpCodes.Unbox_Any, method.ReturnType);
+                if (currentMthod.ReturnType.IsValueType)
+                    mIL.Emit(OpCodes.Unbox_Any, currentMthod.ReturnType);
                 else
-                    mIL.Emit(OpCodes.Castclass, method.ReturnType);
+                    mIL.Emit(OpCodes.Castclass, currentMthod.ReturnType);
 
                 //check update return data BeforeContext 
                 var before_False = mIL.DefineLabel();
@@ -309,7 +311,7 @@ namespace FastAop.Core
                 mIL.Emit(OpCodes.Stloc, afterResult);
                 mIL.Emit(OpCodes.Ldloc, afterContext);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("get_Result"), null);
-                
+
                 mIL.MarkLabel(before_Ret);
 
                 //check update return data ExceptionContext
@@ -331,7 +333,7 @@ namespace FastAop.Core
                 //...
 
                 mIL.MarkLabel(ex_Ret);
-                
+
                 mIL.Emit(OpCodes.Ret);
             }
 
@@ -351,7 +353,7 @@ namespace FastAop.Core
 
         public static dynamic InstanceDyn(Type serviceType, Type attrType = null)
         {
-            return ProxyDyn(serviceType,attrType).CreateDelegate(Expression.GetFuncType(new Type[] { serviceType })).DynamicInvoke();
+            return ProxyDyn(serviceType, attrType).CreateDelegate(Expression.GetFuncType(new Type[] { serviceType })).DynamicInvoke();
         }
 
         private static DynamicMethod ProxyDyn(Type serviceType, Type attrType = null)
@@ -384,7 +386,7 @@ namespace FastAop.Core
             cIL.Emit(OpCodes.Stfld, field);
             cIL.Emit(OpCodes.Ret);
 
-            var listMethod = serviceType.GetMethods(BindingFlags.SuppressChangeType | BindingFlags.Instance | BindingFlags.Public|BindingFlags.Static);
+            var listMethod = serviceType.GetMethods(BindingFlags.SuppressChangeType | BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static);
 
             //method list
             for (int m = 0; m < listMethod.Length; m++)
@@ -448,7 +450,7 @@ namespace FastAop.Core
                 mIL.Emit(OpCodes.Ldloc, beforeContext);
                 mIL.Emit(OpCodes.Ldloc, local);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod("set_Paramter"), new[] { typeof(object[]) });
-              
+
                 //BeforeContext Service_Type
                 mIL.Emit(OpCodes.Ldloc, beforeContext);
                 mIL.Emit(OpCodes.Ldstr, serviceType.AssemblyQualifiedName);
@@ -557,7 +559,7 @@ namespace FastAop.Core
                         mIL.Emit(OpCodes.Box, currentMthod.ReturnType);
 
                     //Declare Method ReturnData
-                    returnData = mIL.DeclareLocal(currentMthod.ReturnType);
+                    returnData = mIL.DeclareLocal(typeof(object));
                     mIL.Emit(OpCodes.Stloc, returnData);
 
                     //Method ReturnData
@@ -615,10 +617,10 @@ namespace FastAop.Core
                 if (currentMthod.ReturnType != typeof(void))
                     mIL.Emit(OpCodes.Ldloc, returnData);
 
-                if (method.ReturnType.IsValueType)
-                    mIL.Emit(OpCodes.Unbox_Any, method.ReturnType);
+                if (currentMthod.ReturnType.IsValueType)
+                    mIL.Emit(OpCodes.Unbox_Any, currentMthod.ReturnType);
                 else
-                    mIL.Emit(OpCodes.Castclass, method.ReturnType);
+                    mIL.Emit(OpCodes.Castclass, currentMthod.ReturnType);
 
                 //check update return data BeforeContext 
                 var before_False = mIL.DefineLabel();
