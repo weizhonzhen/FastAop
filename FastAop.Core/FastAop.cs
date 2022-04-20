@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Threading.Tasks;
 
 namespace FastAop.Core
 {
@@ -234,7 +235,11 @@ namespace FastAop.Core
                     //Method ReturnData
                     mIL.Emit(OpCodes.Ldloc, afterContext);
                     mIL.Emit(OpCodes.Ldloc, returnData);
-                    mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("set_Result"), new[] { typeof(object) });
+
+                    if (currentMthod.ReturnType.BaseType == typeof(Task) || currentMthod.ReturnType == typeof(Task))
+                        mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("set_TaskResult"), new[] { typeof(object) });
+                    else
+                        mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("set_Result"), new[] { typeof(object) });
                 }
 
                 mIL.BeginCatchBlock(typeof(Exception));
@@ -565,7 +570,11 @@ namespace FastAop.Core
                     //Method ReturnData
                     mIL.Emit(OpCodes.Ldloc, afterContext);
                     mIL.Emit(OpCodes.Ldloc, returnData);
-                    mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("set_Result"), new[] { typeof(object) });
+
+                    if (currentMthod.ReturnType.BaseType == typeof(Task) || currentMthod.ReturnType == typeof(Task))
+                        mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("set_TaskResult"), new[] { typeof(object) });
+                    else
+                        mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("set_Result"), new[] { typeof(object) });
                 }
 
                 mIL.BeginCatchBlock(typeof(Exception));
@@ -675,6 +684,103 @@ namespace FastAop.Core
             dynIL.Emit(OpCodes.Ret);
 
             return dynMethod;
+        }
+
+        private delegate object EmitInvoke(object target, object[] paramters);
+
+        internal static object Invoke(object model, MethodInfo methodInfo, object[] param)
+        {
+            if (methodInfo == null || model == null)
+                return null;
+            try
+            {
+                var dynamicMethod = new DynamicMethod("InvokeEmit", typeof(object), new Type[] { typeof(object), typeof(object[]) }, typeof(EmitInvoke).Module);
+                var iL = dynamicMethod.GetILGenerator();
+                var info = methodInfo.GetParameters();
+                var type = new Type[info.Length];
+                var local = new LocalBuilder[type.Length];
+
+                for (int i = 0; i < info.Length; i++)
+                {
+                    if (info[i].ParameterType.IsByRef)
+                        type[i] = info[i].ParameterType.GetElementType();
+                    else
+                        type[i] = info[i].ParameterType;
+                }
+
+                for (int i = 0; i < type.Length; i++)
+                {
+                    local[i] = iL.DeclareLocal(type[i], true);
+                }
+
+                for (int i = 0; i < type.Length; i++)
+                {
+                    iL.Emit(OpCodes.Ldarg_1);
+                    iL.Emit(OpCodes.Ldc_I4, i);
+                    iL.Emit(OpCodes.Ldelem_Ref);
+                    if (type[i].IsValueType)
+                        iL.Emit(OpCodes.Unbox_Any, type[i]);
+                    else
+                        iL.Emit(OpCodes.Castclass, type[i]);
+                    iL.Emit(OpCodes.Stloc, local[i]);
+                }
+
+                if (!methodInfo.IsStatic)
+                    iL.Emit(OpCodes.Ldarg_0);
+
+                for (int i = 0; i < type.Length; i++)
+                {
+                    if (info[i].ParameterType.IsByRef)
+                        iL.Emit(OpCodes.Ldloca_S, local[i]);
+                    else
+                        iL.Emit(OpCodes.Ldloc, local[i]);
+                }
+
+                if (methodInfo.IsStatic)
+                    iL.EmitCall(OpCodes.Call, methodInfo, null);
+                else
+                    iL.EmitCall(OpCodes.Callvirt, methodInfo, null);
+
+                if (methodInfo.ReturnType == typeof(void))
+                    iL.Emit(OpCodes.Ldnull);
+                else if (methodInfo.ReturnType.IsValueType)
+                    iL.Emit(OpCodes.Box, methodInfo.ReturnType);
+                else
+                    iL.Emit(OpCodes.Castclass,methodInfo.ReturnType);
+
+
+                for (int i = 0; i < type.Length; i++)
+                {
+                    if (info[i].ParameterType.IsByRef)
+                    {
+                        iL.Emit(OpCodes.Ldarg_1);
+                        iL.Emit(OpCodes.Ldc_I4, i);
+                        iL.Emit(OpCodes.Ldloc, local[i]);
+                        if (local[i].LocalType.IsValueType)
+                            iL.Emit(OpCodes.Box, local[i].LocalType);
+                        iL.Emit(OpCodes.Stelem_Ref);
+                    }
+                }
+
+                iL.Emit(OpCodes.Ret);
+                var dyn = dynamicMethod.CreateDelegate(typeof(EmitInvoke)) as EmitInvoke;
+                return dyn(model, param);
+            }
+            catch (Exception ex)
+            {
+                return methodInfo.Invoke(model, param);
+            }
+        }
+
+        internal static object GetTaskResult(object result)
+        {
+            if (result == null)
+                return result;
+
+            var method = result.GetType().GetMethods().ToList().Find(a => a.Name == "GetAwaiter");
+            var data = Invoke(result, method, null);
+            method = data.GetType().GetMethods().ToList().Find(a => a.Name == "GetResult");
+            return method.Invoke(data, null);
         }
     }
 }
