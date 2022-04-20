@@ -6,6 +6,7 @@ namespace FastAop
 {
     public class BeforeContext
     {
+        private object _Result;
         public object[] Paramter { get; set; }
 
         public string ServiceType { get; set; }
@@ -16,7 +17,11 @@ namespace FastAop
 
         public bool IsReturn { get; set; }
 
-        public object Result { get; set; }
+        public object Result
+        {
+            set { _Result = Convert.ChangeType(value, ResultType); }
+            get { return _Result; }
+        }
 
         public object TaskResult { get { return FastAop.GetTaskResult(Result); } internal set { } }
 
