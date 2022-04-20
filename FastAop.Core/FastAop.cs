@@ -82,6 +82,9 @@ namespace FastAop.Core
                         throw new Exception($"Interface class name:{interfaceType.Name},method name:{currentMthod.Name}, not support Generic Method constraint");
                 }
 
+                if(currentMthod.ReturnType == typeof(decimal))
+                    throw new Exception($"Interface class name:{interfaceType.Name},method name:{currentMthod.Name}, not support return type decimal");
+
                 var mIL = method.GetILGenerator();
 
                 //Declare Paramter
@@ -301,7 +304,7 @@ namespace FastAop.Core
                 mIL.Emit(OpCodes.Brfalse, before_False);
 
                 //beforeContext IsReturn true 
-                var beforeResult = mIL.DeclareLocal(currentMthod.ReturnType);
+                var beforeResult = mIL.DeclareLocal(typeof(object));
                 mIL.Emit(OpCodes.Stloc, beforeResult);
                 mIL.Emit(OpCodes.Ldloc, beforeContext);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod("get_Result"), null);
@@ -309,7 +312,7 @@ namespace FastAop.Core
 
                 //beforeContext IsReturn false
                 mIL.MarkLabel(before_False);
-                var afterResult = mIL.DeclareLocal(currentMthod.ReturnType);
+                var afterResult = mIL.DeclareLocal(typeof(object));
                 mIL.Emit(OpCodes.Stloc, afterResult);
                 mIL.Emit(OpCodes.Ldloc, afterContext);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("get_Result"), null);
@@ -324,7 +327,7 @@ namespace FastAop.Core
                 mIL.Emit(OpCodes.Brfalse, ex_False);
 
                 //exceptionContext IsReturn true 
-                var exceptionResult = mIL.DeclareLocal(currentMthod.ReturnType);
+                var exceptionResult = mIL.DeclareLocal(typeof(object));
                 mIL.Emit(OpCodes.Stloc, exceptionResult);
                 mIL.Emit(OpCodes.Ldloc, exceptionContext);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod("get_Result"), null);
@@ -408,6 +411,9 @@ namespace FastAop.Core
                     if (currentMthod.GetGenericArguments()[0].GenericParameterAttributes.ToString() != GenericParameterAttributes.None.ToString())
                         throw new Exception($"serviceName class name:{serviceType.Name},method name:{currentMthod.Name}, not support Generic Method constraint");
                 }
+
+                if (currentMthod.ReturnType == typeof(decimal))
+                    throw new Exception($"serviceName class name:{serviceType.Name},method name:{currentMthod.Name}, not support return type decimal");
 
                 var mIL = method.GetILGenerator();
 
@@ -633,7 +639,7 @@ namespace FastAop.Core
                 mIL.Emit(OpCodes.Brfalse, before_False);
 
                 //beforeContext IsReturn true 
-                var beforeResult = mIL.DeclareLocal(currentMthod.ReturnType);
+                var beforeResult = mIL.DeclareLocal(typeof(object));
                 mIL.Emit(OpCodes.Stloc, beforeResult);
                 mIL.Emit(OpCodes.Ldloc, beforeContext);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod("get_Result"), null);
@@ -641,7 +647,7 @@ namespace FastAop.Core
 
                 //beforeContext IsReturn false
                 mIL.MarkLabel(before_False);
-                var afterResult = mIL.DeclareLocal(currentMthod.ReturnType);
+                var afterResult = mIL.DeclareLocal(typeof(object));
                 mIL.Emit(OpCodes.Stloc, afterResult);
                 mIL.Emit(OpCodes.Ldloc, afterContext);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("get_Result"), null);
@@ -656,7 +662,7 @@ namespace FastAop.Core
                 mIL.Emit(OpCodes.Brfalse, ex_False);
 
                 //exceptionContext IsReturn true 
-                var exceptionResult = mIL.DeclareLocal(currentMthod.ReturnType);
+                var exceptionResult = mIL.DeclareLocal(typeof(object));
                 mIL.Emit(OpCodes.Stloc, exceptionResult);
                 mIL.Emit(OpCodes.Ldloc, exceptionContext);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod("get_Result"), null);
