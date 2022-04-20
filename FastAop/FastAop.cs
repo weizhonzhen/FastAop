@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Threading.Tasks;
 
 namespace FastAop
 {
@@ -838,10 +839,15 @@ namespace FastAop
             if (result == null)
                 return result;
 
-            var method = result.GetType().GetMethods().ToList().Find(a => a.Name == "GetAwaiter");
-            var data = Invoke(result, method, null);
-            method = data.GetType().GetMethods().ToList().Find(a => a.Name == "GetResult");
-            return method.Invoke(data, null);
+            if (result is Task)
+            {
+                var method = result.GetType().GetMethods().ToList().Find(a => a.Name == "GetAwaiter");
+                var data = Invoke(result, method, null);
+                method = data.GetType().GetMethods().ToList().Find(a => a.Name == "GetResult");
+                return method.Invoke(data, null);
+            }
+            else
+                return result;
         }
     }
 
