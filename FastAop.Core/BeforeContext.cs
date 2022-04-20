@@ -16,10 +16,9 @@ namespace FastAop.Core
 
         public bool IsReturn { get; set; }
 
-        public object Result { get { return FastAop.GetTaskResult(TaskResult); } set { } }
+        public object Result { get; set; }
 
-        public object TaskResult { get; set; }
-
+        public object TaskResult { get { return FastAop.GetTaskResult(Result); } internal set { } }
 
         public bool IsTaskResult { get { return Method.ReturnType.BaseType == typeof(Task) || Method.ReturnType == typeof(Task); } internal set { } }
 

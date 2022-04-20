@@ -236,10 +236,7 @@ namespace FastAop.Core
                     mIL.Emit(OpCodes.Ldloc, afterContext);
                     mIL.Emit(OpCodes.Ldloc, returnData);
 
-                    if (currentMthod.ReturnType.BaseType == typeof(Task) || currentMthod.ReturnType == typeof(Task))
-                        mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("set_TaskResult"), new[] { typeof(object) });
-                    else
-                        mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("set_Result"), new[] { typeof(object) });
+                    mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("set_Result"), new[] { typeof(object) });
                 }
 
                 mIL.BeginCatchBlock(typeof(Exception));
@@ -571,10 +568,7 @@ namespace FastAop.Core
                     mIL.Emit(OpCodes.Ldloc, afterContext);
                     mIL.Emit(OpCodes.Ldloc, returnData);
 
-                    if (currentMthod.ReturnType.BaseType == typeof(Task) || currentMthod.ReturnType == typeof(Task))
-                        mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("set_TaskResult"), new[] { typeof(object) });
-                    else
-                        mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("set_Result"), new[] { typeof(object) });
+                    mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("set_Result"), new[] { typeof(object) });
                 }
 
                 mIL.BeginCatchBlock(typeof(Exception));
@@ -777,10 +771,15 @@ namespace FastAop.Core
             if (result == null)
                 return result;
 
-            var method = result.GetType().GetMethods().ToList().Find(a => a.Name == "GetAwaiter");
-            var data = Invoke(result, method, null);
-            method = data.GetType().GetMethods().ToList().Find(a => a.Name == "GetResult");
-            return method.Invoke(data, null);
+            if (result is Task)
+            {
+                var method = result.GetType().GetMethods().ToList().Find(a => a.Name == "GetAwaiter");
+                var data = Invoke(result, method, null);
+                method = data.GetType().GetMethods().ToList().Find(a => a.Name == "GetResult");
+                return method.Invoke(data, null);
+            }
+            else
+                return result;
         }
     }
 }
