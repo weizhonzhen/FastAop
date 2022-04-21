@@ -6,26 +6,62 @@ namespace FastAop.Core
 {
     public class BeforeContext
     {
-        private object _Result;
+        private object _Result =new object();
         public object[] Paramter { get; set; }
 
         public string ServiceType { get; set; }
 
         public string MethodName { get; set; }
 
-        public MethodInfo Method { get { return string.IsNullOrEmpty(ServiceType) ? null : FastAopCache.GetType(ServiceType).GetMethod(MethodName); } internal set { } }
+        public MethodInfo Method
+        {
+            get
+            {
+                return string.IsNullOrEmpty(ServiceType) ? null : FastAopCache.GetType(ServiceType).GetMethod(MethodName);
+            }
+            internal set { }
+        }
 
         public bool IsReturn { get; set; }
 
         public object Result
         {
-            set { _Result = Convert.ChangeType(value,ResultType); }
-            get { return _Result; }
+            set
+            {
+                if (!IsTaskResult && value is Task)
+                    value = FastAop.GetTaskResult(value);
+
+                if (!IsTaskResult)
+                    _Result = Convert.ChangeType(value, ResultType);
+                else
+                    _Result = value;
+            }
+            get
+            {
+                if (IsTaskResult && !(_Result is Task))
+                    throw new Exception($"serviceName class name:{ServiceType},method name:{Method.Name}, return type is Task, but aop Before Method retrun type is {_Result.GetType().Name}");
+               else
+                 return _Result;
+            }
         }
 
-        public object TaskResult { get { return FastAop.GetTaskResult(Result); } internal set { } }
+        public object TaskResult
+        {
+            get
+            {
+                return FastAop.GetTaskResult(Result);
+            }
+            internal set { }
+        }
 
-        public bool IsTaskResult { get { return Method.ReturnType.BaseType == typeof(Task) || Method.ReturnType == typeof(Task); } internal set { } }
+        public bool IsTaskResult
+        {
+            get
+            {
+                return Method.ReturnType.BaseType == typeof(Task) || Method.ReturnType == typeof(Task);
+            }
+            internal set { }
+        }
 
         public string[] AttributeName { get; set; }
 
