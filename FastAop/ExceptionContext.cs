@@ -41,7 +41,9 @@ namespace FastAop
             get
             {
                 if (IsTaskResult && !(_Result is Task))
-                    throw new Exception($"serviceName class name:{ServiceType},method name:{Method.Name}, return type is Task, but aop Before Method retrun type is {_Result.GetType().Name}");
+                    throw new Exception($"serviceName class name:{ServiceType},method name:{Method.Name}, return type is Task, but aop retrun type is {_Result.GetType().Name}");
+                else if (IsTaskResult && ResultType.GenericTypeArguments.Length > 0 && _Result.GetType().GenericTypeArguments.Length > 0 && ResultType.GenericTypeArguments[0] != _Result.GetType().GenericTypeArguments[0])
+                    throw new Exception($"serviceName class name:{ServiceType},method name:{Method.Name}, retrun type is Task<{ResultType.GenericTypeArguments[0].Name}>, but aop retrun type is Task<{_Result.GetType().GenericTypeArguments[0].Name}>");
                 else
                     return _Result;
             }
