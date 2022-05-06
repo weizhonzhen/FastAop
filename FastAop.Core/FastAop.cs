@@ -82,9 +82,6 @@ namespace FastAop.Core
                         throw new Exception($"Interface class name:{interfaceType.Name},method name:{currentMthod.Name}, not support Generic Method constraint");
                 }
 
-                if(currentMthod.ReturnType == typeof(decimal))
-                    throw new Exception($"Interface class name:{interfaceType.Name},method name:{currentMthod.Name}, not support return type decimal");
-
                 var mIL = method.GetILGenerator();
 
                 //Declare Paramter
@@ -304,7 +301,7 @@ namespace FastAop.Core
                 mIL.Emit(OpCodes.Brfalse, before_False);
 
                 //beforeContext IsReturn true 
-                var beforeResult = mIL.DeclareLocal(typeof(object));
+                var beforeResult = mIL.DeclareLocal(currentMthod.ReturnType);
                 mIL.Emit(OpCodes.Stloc, beforeResult);
                 mIL.Emit(OpCodes.Ldloc, beforeContext);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod("get_Result"), null);
@@ -312,7 +309,7 @@ namespace FastAop.Core
 
                 //beforeContext IsReturn false
                 mIL.MarkLabel(before_False);
-                var afterResult = mIL.DeclareLocal(typeof(object));
+                var afterResult = mIL.DeclareLocal(currentMthod.ReturnType);
                 mIL.Emit(OpCodes.Stloc, afterResult);
                 mIL.Emit(OpCodes.Ldloc, afterContext);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("get_Result"), null);
@@ -327,7 +324,7 @@ namespace FastAop.Core
                 mIL.Emit(OpCodes.Brfalse, ex_False);
 
                 //exceptionContext IsReturn true 
-                var exceptionResult = mIL.DeclareLocal(typeof(object));
+                var exceptionResult = mIL.DeclareLocal(currentMthod.ReturnType);
                 mIL.Emit(OpCodes.Stloc, exceptionResult);
                 mIL.Emit(OpCodes.Ldloc, exceptionContext);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod("get_Result"), null);
@@ -338,6 +335,11 @@ namespace FastAop.Core
                 //...
 
                 mIL.MarkLabel(ex_Ret);
+
+                if (currentMthod.ReturnType.IsValueType)
+                    mIL.Emit(OpCodes.Unbox_Any, currentMthod.ReturnType);
+                else
+                    mIL.Emit(OpCodes.Castclass, currentMthod.ReturnType);
 
                 mIL.Emit(OpCodes.Ret);
             }
@@ -411,9 +413,6 @@ namespace FastAop.Core
                     if (currentMthod.GetGenericArguments()[0].GenericParameterAttributes.ToString() != GenericParameterAttributes.None.ToString())
                         throw new Exception($"serviceName class name:{serviceType.Name},method name:{currentMthod.Name}, not support Generic Method constraint");
                 }
-
-                if (currentMthod.ReturnType == typeof(decimal))
-                    throw new Exception($"serviceName class name:{serviceType.Name},method name:{currentMthod.Name}, not support return type decimal");
 
                 var mIL = method.GetILGenerator();
 
@@ -674,6 +673,11 @@ namespace FastAop.Core
 
                 mIL.MarkLabel(ex_Ret);
 
+                if (currentMthod.ReturnType.IsValueType)
+                    mIL.Emit(OpCodes.Unbox_Any, currentMthod.ReturnType);
+                else
+                    mIL.Emit(OpCodes.Castclass, currentMthod.ReturnType);
+
                 mIL.Emit(OpCodes.Ret);
             }
 
@@ -746,7 +750,7 @@ namespace FastAop.Core
                 else if (methodInfo.ReturnType.IsValueType)
                     iL.Emit(OpCodes.Box, methodInfo.ReturnType);
                 else
-                    iL.Emit(OpCodes.Castclass,methodInfo.ReturnType);
+                    iL.Emit(OpCodes.Castclass, methodInfo.ReturnType);
 
 
                 for (int i = 0; i < type.Length; i++)
@@ -784,8 +788,20 @@ namespace FastAop.Core
                 method = data.GetType().GetMethods().ToList().Find(a => a.Name == "GetResult");
                 return method.Invoke(data, null);
             }
+            else if(IsValueTask(result.GetType()))
+            {
+                var method = result.GetType().GetMethods().ToList().Find(a => a.Name == "get_Result");
+                return method.Invoke(result, null);
+            }
             else
                 return result;
+        }
+
+        internal static bool IsValueTask(Type type)
+        {
+            if (type.GetGenericArguments().Length > 0)
+                return typeof(ValueTask<>).MakeGenericType(type.GetGenericArguments()[0]) == type;
+            return false;
         }
     }
 }

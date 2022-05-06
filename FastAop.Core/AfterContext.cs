@@ -41,6 +41,15 @@ namespace FastAop.Core
             internal set { }
         }
 
+        public bool isValueTaskResult
+        {
+            get
+            {
+                return FastAop.IsValueTask(Method.ReturnType);
+            }
+            internal set { }
+        }
+
         public string[] AttributeName { get; set; }
 
         public Type ResultType
