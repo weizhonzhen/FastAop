@@ -154,9 +154,6 @@ namespace FastAop
                         throw new Exception($"Interface class name:{interfaceType.Name},method name:{currentMthod.Name}, not support Generic Method constraint");
                 }
 
-                if (currentMthod.ReturnType == typeof(decimal))
-                    throw new Exception($"Interface class name:{interfaceType.Name},method name:{currentMthod.Name}, not support return type decimal");
-
                 var mIL = method.GetILGenerator();
 
                 //Declare Paramter
@@ -410,6 +407,11 @@ namespace FastAop
 
                 mIL.MarkLabel(ex_Ret);
 
+                if (currentMthod.ReturnType.IsValueType)
+                    mIL.Emit(OpCodes.Unbox_Any, currentMthod.ReturnType);
+                else
+                    mIL.Emit(OpCodes.Castclass, currentMthod.ReturnType);
+
                 mIL.Emit(OpCodes.Ret);
             }
 
@@ -480,10 +482,7 @@ namespace FastAop
                     if (currentMthod.GetGenericArguments()[0].GenericParameterAttributes.ToString() != GenericParameterAttributes.None.ToString())
                         throw new Exception($"serviceName class name:{serviceType.Name},method name:{currentMthod.Name}, not support Generic Method constraint");
                 }
-
-                if (currentMthod.ReturnType == typeof(decimal))
-                    throw new Exception($"serviceName class name:{serviceType.Name},method name:{currentMthod.Name}, not support return type decimal");
-
+                            
                 var mIL = method.GetILGenerator();
 
                 //Declare Paramter
@@ -742,6 +741,11 @@ namespace FastAop
 
                 mIL.MarkLabel(ex_Ret);
 
+                if (currentMthod.ReturnType.IsValueType)
+                    mIL.Emit(OpCodes.Unbox_Any, currentMthod.ReturnType);
+                else
+                    mIL.Emit(OpCodes.Castclass, currentMthod.ReturnType);
+
                 mIL.Emit(OpCodes.Ret);
             }
 
@@ -847,10 +851,8 @@ namespace FastAop
 
             if (result is Task)
             {
-                var method = result.GetType().GetMethods().ToList().Find(a => a.Name == "GetAwaiter");
-                var data = Invoke(result, method, null);
-                method = data.GetType().GetMethods().ToList().Find(a => a.Name == "GetResult");
-                return method.Invoke(data, null);
+                var method = result.GetType().GetMethods().ToList().Find(a => a.Name == "get_Result");
+                return Invoke(result, method, null);
             }
             else
                 return result;
