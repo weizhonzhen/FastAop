@@ -783,10 +783,8 @@ namespace FastAop.Core
 
             if (result is Task)
             {
-                var method = result.GetType().GetMethods().ToList().Find(a => a.Name == "GetAwaiter");
-                var data = Invoke(result, method, null);
-                method = data.GetType().GetMethods().ToList().Find(a => a.Name == "GetResult");
-                return method.Invoke(data, null);
+                var method = result.GetType().GetMethods().ToList().Find(a => a.Name == "get_Result");
+                return Invoke(result, method, null);
             }
             else if(IsValueTask(result.GetType()))
             {
