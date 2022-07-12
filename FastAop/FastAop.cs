@@ -38,6 +38,9 @@ namespace FastAop
                         if (b.BaseType == typeof(FastAopAttribute))
                             return;
 
+                        if (b.BaseType == typeof(Attribute))
+                            return;
+
                         b.GetConstructors().ToList().ForEach(c =>
                         {
                             c.GetParameters().ToList().ForEach(p =>
@@ -81,6 +84,9 @@ namespace FastAop
                             return;
 
                         if (b.BaseType == typeof(FastAopAttribute))
+                            return;
+
+                        if (b.BaseType == typeof(Attribute))
                             return;
 
                         b.GetConstructors().ToList().ForEach(c =>
@@ -144,7 +150,7 @@ namespace FastAop
                 throw new Exception($"serviceType class have Constructor Paramtes not support,class name:{model.serviceType.Name}");
 
             var assemblyName = new AssemblyName("FastAop.ILGrator");
-            var assembly = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.RunAndSave);
+            var assembly = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
             var module = assembly.DefineDynamicModule(assemblyName.Name);
             var builder = module.DefineType($"Aop_{assemblyName}", TypeAttributes.Public, null, new Type[] { model.interfaceType });
 
@@ -442,6 +448,8 @@ namespace FastAop
 
             var dynMethod = new DynamicMethod("Instance", model.interfaceType, arryType);
             var dynIL = dynMethod.GetILGenerator();
+
+            //constructor param type
             for (int i = 0; i < model.constructorType.Count; i++)
                 dynIL.Emit(OpCodes.Ldarg, i);
             dynIL.Emit(OpCodes.Newobj, builder.CreateType().GetConstructor(arryType));
