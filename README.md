@@ -35,6 +35,12 @@ public class TestAop : ITestAop
 
 public class Test_Aop
 {
+    ITestAop _a;
+    public TestAop(ITestAop a)
+    {
+       _a=a;
+    }
+
     [Log1Aop(Sort = 1)]
     [LogAop(Sort = 2)]
     public string Test1(string a, string b)
