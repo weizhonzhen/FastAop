@@ -118,6 +118,12 @@ dynamic model = FastAop.InstanceDyn(typeof(Test_Aop));//not interface class
 
 public class TestAop : ITestAop
 {
+    int _a;
+    public TestAop(int a)
+    {
+       _a=a;
+    }
+    
     [Log1Aop(Sort = 1)]
     [LogAop(Sort = 2)]
     public string Test1(string a, string b)
