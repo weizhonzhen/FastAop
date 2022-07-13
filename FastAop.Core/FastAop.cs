@@ -857,10 +857,10 @@ namespace FastAop.Core
                     model.dynType.Add(p.ParameterType);
                     if (!p.ParameterType.IsAbstract && !p.ParameterType.IsInterface)
                         model.dynParam.Add(Activator.CreateInstance(p.ParameterType));
-                    else if (FastAopExtension.serviceProvider.GetServices(p.ParameterType) == null && p.ParameterType.IsInterface)
+                    else if (FastAopExtension.serviceProvider.GetService(p.ParameterType) == null && p.ParameterType.IsInterface)
                         throw new Exception($"can't find {p.ParameterType.Name} Instance class");
                     else if (p.ParameterType.IsInterface)
-                        model.dynParam.Add(FastAopExtension.serviceProvider.GetServices(p.ParameterType));
+                        model.dynParam.Add(FastAopExtension.serviceProvider.GetService(p.ParameterType));
                     
                 });
             });

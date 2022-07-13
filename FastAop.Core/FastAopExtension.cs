@@ -65,6 +65,7 @@ namespace Microsoft.Extensions.DependencyInjection
                                     serviceCollection.AddScoped(p.ParameterType, s => { return Activator.CreateInstance(p.ParameterType, model.dynParam.ToArray()); });
                                 }
                             });
+                            serviceProvider = serviceCollection.BuildServiceProvider();
                         });
 
                         if (!b.IsInterface && b.GetInterfaces().Any() && isServiceAttr)
@@ -128,6 +129,7 @@ namespace Microsoft.Extensions.DependencyInjection
                                 else if (!p.ParameterType.IsInterface && !p.ParameterType.GetInterfaces().Any())
                                     serviceCollection.AddScoped(p.ParameterType, s => { return FastAop.Core.FastAop.InstanceDyn(p.ParameterType, aopType); });
                             });
+                            serviceProvider = serviceCollection.BuildServiceProvider();
                         });
 
 
