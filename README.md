@@ -11,7 +11,7 @@ services.AddFastAop("FastAop.Core.Test",typeof(LogAop));
 
 //one aop
 var model = FastAop.Instance<TestAop, ITestAop>();
-dynamic model = FastAop.InstanceDyn(typeof(Test_Aop));//not interface class
+dynamic model = FastAopDyn.Instance(typeof(Test_Aop));//not interface class
 
 
 public class TestAop : ITestAop
@@ -113,7 +113,7 @@ services.AddFastAop("FastAop.Core.Test",typeof(LogAop));
 
 //one aop
 var model = FastAop.Instance<TestAop, ITestAop>();
-dynamic model = FastAop.InstanceDyn(typeof(Test_Aop));//not interface class
+dynamic model = FastAopDyn.Instance(typeof(Test_Aop));//not interface class
 
 
 public class TestAop : ITestAop
