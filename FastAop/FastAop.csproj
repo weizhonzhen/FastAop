@@ -42,12 +42,19 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AfterContext.cs" />
-    <Compile Include="ExceptionContext.cs" />
-    <Compile Include="BeforeContext.cs" />
-    <Compile Include="FastAopAttribute.cs" />
+    <Compile Include="Cache\FastAopCache.cs" />
+    <Compile Include="Constructor\Constructor.cs" />
+    <Compile Include="Context\AfterContext.cs" />
+    <Compile Include="Context\ExceptionContext.cs" />
+    <Compile Include="Context\BeforeContext.cs" />
+    <Compile Include="Attribute\FastAopAttribute.cs" />
+    <Compile Include="Context\FastAopContext.cs" />
     <Compile Include="FastAop.cs" />
+    <Compile Include="FastAopDyn.cs" />
+    <Compile Include="Model\ConstructorModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Result\BaseResult.cs" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

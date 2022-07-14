@@ -1,5 +1,4 @@
-﻿using FastAop.Constructor;
-using FastAop.Context;
+﻿using FastAop.Context;
 using FastAop.Model;
 using System;
 using System.Collections.Generic;
@@ -10,138 +9,22 @@ using System.Reflection.Emit;
 
 namespace FastAop
 {
-    public static class FastAop
+    public static class FastAopDyn
     {
-        internal static Dictionary<Type, object> _types = new Dictionary<Type, object>();
+        internal static Dictionary<Type, dynamic> _types = new Dictionary<Type, dynamic>();
 
-        public static void Init(string nameSpaceService, Type aopType)
+        public static dynamic Instance<T>(Type aopType = null)
         {
-            if (aopType.BaseType != typeof(FastAopAttribute))
+            if (aopType != null && aopType.BaseType != typeof(FastAopAttribute))
                 throw new Exception($"aopType class not is FastAopAttribute,class name:{aopType.Name}");
 
-            if (!string.IsNullOrEmpty(nameSpaceService))
-            {
-                Assembly.GetCallingAssembly().GetReferencedAssemblies().ToList().ForEach(a =>
-                {
-                    if (!AppDomain.CurrentDomain.GetAssemblies().ToList().Exists(b => b.GetName().Name == a.Name))
-                        try { Assembly.Load(a.Name); } catch (Exception) { }
-                });
-
-                AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(assembly =>
-                {
-                    if (assembly.IsDynamic)
-                        return;
-                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace == nameSpaceService).ToList().ForEach(b =>
-                    {
-                        if (b.IsAbstract && b.IsSealed)
-                            return;
-
-                        if (b.BaseType == typeof(FastAopAttribute))
-                            return;
-
-                        if (b.BaseType == typeof(Attribute))
-                            return;
-
-                        b.GetConstructors().ToList().ForEach(c =>
-                        {
-                            Constructor.Constructor.depth = 0;
-                            c.GetParameters().ToList().ForEach(p =>
-                            {
-                                if (p.ParameterType.isSysType())
-                                    return;
-
-                                if (!p.ParameterType.IsInterface && p.ParameterType.GetInterfaces().Any())
-                                    _types.SetValue(p.ParameterType.GetInterfaces().First(), FastAop.Instance(p.ParameterType, p.ParameterType.GetInterfaces().First()));
-                                else if (!p.ParameterType.IsInterface && !p.ParameterType.GetInterfaces().Any())
-                                    Dic.SetValueDyn(FastAopDyn._types, p.ParameterType, FastAopDyn.Instance(p.ParameterType));
-                            });
-                        });
-
-                        if (!b.IsInterface && b.GetInterfaces().Any())
-                            _types.SetValue(b.GetInterfaces().First(), FastAop.Instance(b, b.GetInterfaces().First(), aopType));
-                        else if (!b.IsInterface && !b.GetInterfaces().Any())
-                            Dic.SetValueDyn(FastAopDyn._types, b, FastAopDyn.Instance(b, aopType));
-                    });
-                });
-            }
-        }
-
-        public static void Init(string nameSpaceService)
-        {
-            if (!string.IsNullOrEmpty(nameSpaceService))
-            {
-                Assembly.GetCallingAssembly().GetReferencedAssemblies().ToList().ForEach(a =>
-                {
-                    if (!AppDomain.CurrentDomain.GetAssemblies().ToList().Exists(b => b.GetName().Name == a.Name))
-                        try { Assembly.Load(a.Name); } catch (Exception) { }
-                });
-
-                AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(assembly =>
-                {
-                    if (assembly.IsDynamic)
-                        return;
-                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace == nameSpaceService).ToList().ForEach(b =>
-                    {
-                        if (b.IsAbstract && b.IsSealed)
-                            return;
-
-                        if (b.BaseType == typeof(FastAopAttribute))
-                            return;
-
-                        if (b.BaseType == typeof(Attribute))
-                            return;
-
-                        b.GetConstructors().ToList().ForEach(c =>
-                        {
-                           Constructor.Constructor.depth = 0;
-                            c.GetParameters().ToList().ForEach(p =>
-                            {
-                                if (!p.ParameterType.IsInterface && p.ParameterType.GetInterfaces().Any())
-                                    _types.SetValue(p.ParameterType.GetInterfaces().First(), FastAop.Instance(p.ParameterType, p.ParameterType.GetInterfaces().First()));
-                                else if (!p.ParameterType.IsInterface && !p.ParameterType.GetInterfaces().Any())
-                                    Dic.SetValueDyn(FastAopDyn._types, p.ParameterType, FastAopDyn.Instance(p.ParameterType));
-                            });
-                        });
-
-                        if (!b.IsInterface && b.GetInterfaces().Any())
-                            _types.SetValue(b.GetInterfaces().First(), FastAop.Instance(b, b.GetInterfaces().First()));
-                        else if (!b.IsInterface && !b.GetInterfaces().Any())
-                            Dic.SetValueDyn(FastAopDyn._types, b, FastAopDyn.Instance(b));
-                    });
-                });
-            }
-        }
-
-        public static object Instance(Type serviceType, Type interfaceType)
-        {
-            var model = Constructor.Constructor.Get(serviceType, interfaceType);
-            return Proxy(model).CreateDelegate(Expression.GetFuncType(model.dynType.ToArray())).DynamicInvoke(model.dynParam.ToArray());
-        }
-
-        public static object Instance(Type serviceType, Type interfaceType, Type attrType)
-        {
-            if (attrType.BaseType != typeof(FastAopAttribute))
-                throw new Exception($"attrType baseType not is FastAopAttribute,class name:{attrType.Name}");
-
-            var model = Constructor.Constructor.Get(serviceType, interfaceType);
-            return Proxy(model, attrType).CreateDelegate(Expression.GetFuncType(model.dynType.ToArray())).DynamicInvoke(model.dynParam.ToArray());
-        }
-
-        public static I Instance<S, I>() where S : class where I : class
-        {
-            var model = Constructor.Constructor.Get(typeof(S), typeof(I));
-            return (I)Proxy(model).CreateDelegate(Expression.GetFuncType(model.dynType.ToArray())).DynamicInvoke(model.dynParam.ToArray());
+            var model = Constructor.Constructor.Get(typeof(T), null);
+            return Proxy(model, aopType).CreateDelegate(Expression.GetFuncType(model.dynType.ToArray())).DynamicInvoke(model.dynParam);
         }
 
         private static DynamicMethod Proxy(ConstructorModel model, Type attrType = null)
         {
             var arryType = model.constructorType.Count > 0 ? model.constructorType.ToArray() : Type.EmptyTypes;
-
-            if (!model.interfaceType.IsPublic)
-                throw new Exception($"interfaceType is not public class,class name:{model.interfaceType.Name}");
-
-            if (!model.interfaceType.IsInterface)
-                throw new Exception($"interfaceType only Interface class,class name:{model.interfaceType.Name}");
 
             if (model.serviceType.IsInterface)
                 throw new Exception($"serviceType not Interface class,class name:{model.serviceType.Name}");
@@ -152,14 +35,15 @@ namespace FastAop
             if (model.serviceType.GetConstructor(arryType) == null)
                 throw new Exception($"serviceType class have Constructor Paramtes not support,class name:{model.serviceType.Name}");
 
-            var assemblyName = new AssemblyName("FastAop.ILGrator");
-            var assembly = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
+            var assemblyName = new AssemblyName("FastAop.ILGrator.Core");
+            var assembly = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
             var module = assembly.DefineDynamicModule(assemblyName.Name);
-            var builder = module.DefineType($"Aop_{assemblyName}", TypeAttributes.Public, null, new Type[] { model.interfaceType });
+            var builder = module.DefineType($"Aop_{assemblyName}", TypeAttributes.Public, model.serviceType, new Type[0]);
 
             //Constructor method
             var field = builder.DefineField($"Aop_{model.serviceType.Name}_Field", model.serviceType, FieldAttributes.Private);
             var constructor = builder.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, arryType);
+
             var cIL = constructor.GetILGenerator();
 
             if (model.constructorType.Count > 0)
@@ -170,12 +54,15 @@ namespace FastAop
             cIL.Emit(OpCodes.Stfld, field);
             cIL.Emit(OpCodes.Ret);
 
-            var listMethod = model.interfaceType.GetMethods(BindingFlags.SuppressChangeType | BindingFlags.Instance | BindingFlags.Public);
+            var listMethod = model.serviceType.GetMethods(BindingFlags.SuppressChangeType | BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static);
 
             //method list
             for (int m = 0; m < listMethod.Length; m++)
             {
                 var currentMthod = listMethod[m];
+                if (currentMthod.Name == "Equals" || currentMthod.Name == "GetHashCode" || currentMthod.Name == "ToString" || currentMthod.Name == "GetType")
+                    continue;
+
                 var mTypes = currentMthod.GetParameters().Select(d => d.ParameterType).ToArray();
                 var method = builder.DefineMethod(currentMthod.Name, MethodAttributes.Public | MethodAttributes.NewSlot | MethodAttributes.Virtual, currentMthod.ReturnType, mTypes);
 
@@ -185,7 +72,7 @@ namespace FastAop
                     method.DefineGenericParameters(currentMthod.GetGenericArguments().ToList().Select(a => a.Name).ToArray());
 
                     if (currentMthod.GetGenericArguments()[0].GenericParameterAttributes.ToString() != GenericParameterAttributes.None.ToString())
-                        throw new Exception($"Interface class name:{model.interfaceType.Name},method name:{currentMthod.Name}, not support Generic Method constraint");
+                        throw new Exception($"serviceName class name:{model.serviceType.Name},method name:{currentMthod.Name}, not support Generic Method constraint");
                 }
 
                 var mIL = method.GetILGenerator();
@@ -208,7 +95,7 @@ namespace FastAop
                 }
 
                 //AttributeName
-                var attList = (model.serviceType.GetMethod(currentMthod.Name, mTypes)?.GetCustomAttributes().ToList().Select(a => a.GetType().Name).ToList() ?? new List<string>()).ToArray();
+                var attList = model.serviceType.GetMethod(currentMthod.Name, mTypes).GetCustomAttributes().ToList().Select(a => a.GetType().Name).ToArray();
                 var AttributeName = mIL.DeclareLocal(typeof(string[]));
                 mIL.Emit(OpCodes.Ldc_I4, attList.Length);
                 mIL.Emit(OpCodes.Newarr, typeof(string));
@@ -237,7 +124,7 @@ namespace FastAop
                 mIL.Emit(OpCodes.Ldstr, model.serviceType.AssemblyQualifiedName);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod("set_ServiceType"), new[] { typeof(string) });
 
-                //BeforeContext MethodName
+                //Before BeforeContext MethodName
                 mIL.Emit(OpCodes.Ldloc, beforeContext);
                 mIL.Emit(OpCodes.Ldstr, currentMthod.Name);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod("set_MethodName"), new[] { typeof(string) });
@@ -283,13 +170,14 @@ namespace FastAop
                 mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod("set_AttributeName"), new[] { typeof(string[]) });
 
                 //aop attr
+                var aopAttribute = new List<FastAopAttribute>();
+                var attrList = new List<LocalBuilder>();
                 var aopAttrType = typeof(FastAopAttribute);
                 var beforeMethod = aopAttrType.GetMethod("Before");
                 var afterMethod = aopAttrType.GetMethod("After");
                 var exceptionMethod = aopAttrType.GetMethod("Exception");
-                var aopAttribute = new List<FastAopAttribute>();
 
-                aopAttribute = model.serviceType.GetMethod(currentMthod.Name, mTypes)?.GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToList() ?? new List<FastAopAttribute>();
+                aopAttribute = model.serviceType.GetMethod(currentMthod.Name, mTypes).GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToList();
                 if (attrType != null)
                 {
                     //auto add FastAopAttribute
@@ -299,17 +187,15 @@ namespace FastAop
                     aopAttribute.Add(Activator.CreateInstance(attrType) as FastAopAttribute);
                 }
 
-                var attrList = new List<LocalBuilder>();
-
-                //attr
+                //before attr
                 for (int attr = 0; attr < aopAttribute.Count; attr++)
                 {
-                    //DeclareContext attr
+                    //Declare attr type
                     var attr_Type = (aopAttribute[attr]).GetType();
                     var attrLocal = mIL.DeclareLocal(attr_Type);
-                    mIL.Emit(OpCodes.Newobj, attr_Type.GetConstructor(Type.EmptyTypes));
 
                     //BeforeContext
+                    mIL.Emit(OpCodes.Newobj, attr_Type.GetConstructor(Type.EmptyTypes));
                     mIL.Emit(OpCodes.Stloc, attrLocal);
                     mIL.Emit(OpCodes.Ldloc, attrLocal);
                     mIL.Emit(OpCodes.Ldloc, beforeContext);
@@ -325,7 +211,13 @@ namespace FastAop
                     mIL.Emit(OpCodes.Ldarg, t + 1);
                 }
 
-                mIL.Emit(OpCodes.Callvirt, currentMthod);
+                if (currentMthod.IsStatic)
+                {
+                    mIL.Emit(OpCodes.Ldftn, currentMthod);
+                    mIL.EmitCalli(OpCodes.Calli, CallingConventions.Standard, currentMthod.ReturnType, mTypes, null);
+                }
+                else
+                    mIL.Emit(OpCodes.Callvirt, currentMthod);
 
                 //method ReturnData
                 LocalBuilder returnData = null;
@@ -350,7 +242,7 @@ namespace FastAop
                 var exception = mIL.DeclareLocal(typeof(Exception));
                 mIL.Emit(OpCodes.Stloc, exception);
 
-                //Exception Context exception
+                //ExceptionContext exception
                 mIL.Emit(OpCodes.Ldloc, exceptionContext);
                 mIL.Emit(OpCodes.Ldloc, exception);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod("set_Exception"), new[] { typeof(Exception) });
@@ -360,12 +252,12 @@ namespace FastAop
                 mIL.Emit(OpCodes.Ldstr, model.serviceType.AssemblyQualifiedName);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod("set_ServiceType"), new[] { typeof(string) });
 
-                //Exception Context MethodName
+                //ExceptionContext MethodName
                 mIL.Emit(OpCodes.Ldloc, exceptionContext);
                 mIL.Emit(OpCodes.Ldstr, currentMthod.Name);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod("set_MethodName"), new[] { typeof(string) });
 
-                //Exception Context Paramter
+                //ExceptionContext Paramter;
                 mIL.Emit(OpCodes.Ldloc, exceptionContext);
                 mIL.Emit(OpCodes.Ldloc, local);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod("set_Paramter"), new[] { typeof(object[]) });
@@ -447,19 +339,31 @@ namespace FastAop
                     else
                         mIL.Emit(OpCodes.Castclass, currentMthod.ReturnType);
                 }
-
                 mIL.Emit(OpCodes.Ret);
             }
 
-            var dynMethod = new DynamicMethod("Instance", model.interfaceType, arryType);
-            var dynIL = dynMethod.GetILGenerator();
+            var dynMethod = new DynamicMethod("Instance", model.serviceType, arryType);
 
-            //constructor param type
+            var dynIL = dynMethod.GetILGenerator();
             for (int i = 0; i < model.constructorType.Count; i++)
                 dynIL.Emit(OpCodes.Ldarg, i);
-            dynIL.Emit(OpCodes.Newobj, builder.CreateType().GetConstructor(arryType));
+            dynIL.Emit(OpCodes.Newobj, builder.CreateTypeInfo().AsType().GetConstructor(arryType));
             dynIL.Emit(OpCodes.Ret);
+
             return dynMethod;
-        }       
-     }
+        }
+
+        public static dynamic Instance(Type serviceType, Type aopType = null)
+        {
+            if (aopType != null && aopType.BaseType != typeof(FastAopAttribute))
+                throw new Exception($"aopType class not is FastAopAttribute,class name:{aopType.Name}");
+
+            var model = Constructor.Constructor.Get(serviceType, null);
+
+            if (model.dynParam.Count > 0)
+                return Proxy(model, aopType).CreateDelegate(Expression.GetFuncType(model.dynType.ToArray())).DynamicInvoke(model.dynParam.ToArray());
+            else
+                return Proxy(model, aopType).CreateDelegate(Expression.GetFuncType(model.dynType.ToArray())).DynamicInvoke();
+        }
+    }
 }
