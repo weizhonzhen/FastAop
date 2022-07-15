@@ -35,7 +35,7 @@ namespace FastAop
             if (model.serviceType.GetConstructor(arryType) == null)
                 throw new Exception($"serviceType class have Constructor Paramtes not support,class name:{model.serviceType.Name}");
 
-            var assemblyName = new AssemblyName("FastAop.ILGrator.Core");
+            var assemblyName = new AssemblyName("FastAop.ILGrator");
             var assembly = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
             var module = assembly.DefineDynamicModule(assemblyName.Name);
             var builder = module.DefineType($"Aop_{assemblyName}", TypeAttributes.Public, model.serviceType, new Type[0]);
