@@ -1,5 +1,4 @@
-﻿using FastAop.Constructor;
-using FastAop.Context;
+﻿using FastAop.Context;
 using FastAop.Model;
 using System;
 using System.Collections.Generic;
@@ -47,13 +46,7 @@ namespace FastAop
                             Constructor.Constructor.depth = 0;
                             c.GetParameters().ToList().ForEach(p =>
                             {
-                                if (p.ParameterType.isSysType())
-                                    return;
-
-                                if (!p.ParameterType.IsInterface && p.ParameterType.GetInterfaces().Any())
-                                    _types.SetValue(p.ParameterType.GetInterfaces().First(), FastAop.Instance(p.ParameterType, p.ParameterType.GetInterfaces().First()));
-                                else if (!p.ParameterType.IsInterface && !p.ParameterType.GetInterfaces().Any())
-                                    Dic.SetValueDyn(FastAopDyn._types, p.ParameterType, FastAopDyn.Instance(p.ParameterType));
+                                Constructor.Constructor.Param(p.ParameterType, aopType);
                             });
                         });
 
@@ -82,6 +75,13 @@ namespace FastAop
                         return;
                     assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace == nameSpaceService).ToList().ForEach(b =>
                     {
+                        var isServiceAttr = false;
+                        b.GetMethods().ToList().ForEach(m =>
+                        {
+                            if (m.GetCustomAttributes().ToList().Exists(a => a.GetType().BaseType == typeof(FastAopAttribute)))
+                                isServiceAttr = true;
+                        });
+
                         if (b.IsAbstract && b.IsSealed)
                             return;
 
@@ -96,10 +96,7 @@ namespace FastAop
                            Constructor.Constructor.depth = 0;
                             c.GetParameters().ToList().ForEach(p =>
                             {
-                                if (!p.ParameterType.IsInterface && p.ParameterType.GetInterfaces().Any())
-                                    _types.SetValue(p.ParameterType.GetInterfaces().First(), FastAop.Instance(p.ParameterType, p.ParameterType.GetInterfaces().First()));
-                                else if (!p.ParameterType.IsInterface && !p.ParameterType.GetInterfaces().Any())
-                                    Dic.SetValueDyn(FastAopDyn._types, p.ParameterType, FastAopDyn.Instance(p.ParameterType));
+                                Constructor.Constructor.Param(p.ParameterType,isServiceAttr);
                             });
                         });
 
