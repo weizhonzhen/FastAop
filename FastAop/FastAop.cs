@@ -53,7 +53,7 @@ namespace FastAop
                         if (!b.IsInterface && b.GetInterfaces().Any())
                             _types.SetValue(b.GetInterfaces().First(), FastAop.Instance(b, b.GetInterfaces().First(), aopType));
                         else if (!b.IsInterface && !b.GetInterfaces().Any())
-                            Dic.SetValueDyn(FastAopDyn._types, b, FastAopDyn.Instance(b, aopType));
+                           Dic.SetValueDyn(b, FastAopDyn.Instance(b, aopType));
                     });
                 });
             }
@@ -103,7 +103,7 @@ namespace FastAop
                         if (!b.IsInterface && b.GetInterfaces().Any())
                             _types.SetValue(b.GetInterfaces().First(), FastAop.Instance(b, b.GetInterfaces().First()));
                         else if (!b.IsInterface && !b.GetInterfaces().Any())
-                            Dic.SetValueDyn(FastAopDyn._types, b, FastAopDyn.Instance(b));
+                            Dic.SetValueDyn(b, FastAopDyn.Instance(b));
                     });
                 });
             }
@@ -179,7 +179,7 @@ namespace FastAop
             if (model.serviceType.GetConstructor(arryType) == null)
                 throw new Exception($"serviceType class have Constructor Paramtes not support,class name:{model.serviceType.Name}");
 
-            var assemblyName = new AssemblyName("FastAop.ILGrator");
+            var assemblyName = new AssemblyName($"FastAop.ILGrator");
             var assembly = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
             var module = assembly.DefineDynamicModule(assemblyName.Name);
             var builder = module.DefineType($"Aop_{assemblyName}", TypeAttributes.Public, null, new Type[] { model.interfaceType });
@@ -188,11 +188,17 @@ namespace FastAop
             var field = builder.DefineField($"Aop_{model.serviceType.Name}_Field", model.serviceType, FieldAttributes.Private);
             var constructor = builder.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, arryType);
             var cIL = constructor.GetILGenerator();
-
-            if (model.constructorType.Count > 0)
-                cIL.Emit(OpCodes.Ldarg_0);
-
             cIL.Emit(OpCodes.Ldarg_0);
+
+            //constructor param
+            if (model.constructorType.Count > 0)
+            {
+                for (int i = 1; i <= model.dynParam.Count; i++)
+                {
+                    cIL.Emit(OpCodes.Ldarg, i);
+                }
+            }
+
             cIL.Emit(OpCodes.Newobj, model.serviceType.GetConstructor(arryType));
             cIL.Emit(OpCodes.Stfld, field);
             cIL.Emit(OpCodes.Ret);
