@@ -54,11 +54,17 @@ namespace FastAop
             var constructor = builder.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, arryType);
 
             var cIL = constructor.GetILGenerator();
-
-            if (model.constructorType.Count > 0)
-                cIL.Emit(OpCodes.Ldarg_0);
-
             cIL.Emit(OpCodes.Ldarg_0);
+
+            //constructor param
+            if (model.constructorType.Count > 0)
+            {
+                for (int i = 1; i <= model.dynParam.Count; i++)
+                {
+                    cIL.Emit(OpCodes.Ldarg, i);
+                }
+            }
+
             cIL.Emit(OpCodes.Newobj, model.serviceType.GetConstructor(arryType));
             cIL.Emit(OpCodes.Stfld, field);
             cIL.Emit(OpCodes.Ret);
