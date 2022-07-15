@@ -112,7 +112,16 @@ namespace FastAop
         public static object Instance(Type serviceType, Type interfaceType)
         {
             var model = Constructor.Constructor.Get(serviceType, interfaceType);
-            return Proxy(model).CreateDelegate(Expression.GetFuncType(model.dynType.ToArray())).DynamicInvoke(model.dynParam.ToArray());
+            var funcMethod = Proxy(model).CreateDelegate(Expression.GetFuncType(model.dynType.ToArray()));
+
+            try
+            {
+                return funcMethod.DynamicInvoke(model.dynParam.ToArray());
+            }
+            catch
+            {
+                throw new Exception($"Type: {serviceType.FullName},Constructor Paramter: {string.Join(",", model.constructorType.Select(a => a.Name))}");
+            }
         }
 
         public static object Instance(Type serviceType, Type interfaceType, Type attrType)
@@ -121,13 +130,31 @@ namespace FastAop
                 throw new Exception($"attrType baseType not is FastAopAttribute,class name:{attrType.Name}");
 
             var model = Constructor.Constructor.Get(serviceType, interfaceType);
-            return Proxy(model, attrType).CreateDelegate(Expression.GetFuncType(model.dynType.ToArray())).DynamicInvoke(model.dynParam.ToArray());
+            var funcMethod = Proxy(model, attrType).CreateDelegate(Expression.GetFuncType(model.dynType.ToArray()));
+
+            try
+            {
+                return funcMethod.DynamicInvoke(model.dynParam.ToArray());
+            }
+            catch
+            {
+                throw new Exception($"Type: {serviceType.FullName},Constructor Paramter: {string.Join(",", model.constructorType.Select(a => a.Name))}");
+            }
         }
 
         public static I Instance<S, I>() where S : class where I : class
         {
             var model = Constructor.Constructor.Get(typeof(S), typeof(I));
-            return (I)Proxy(model).CreateDelegate(Expression.GetFuncType(model.dynType.ToArray())).DynamicInvoke(model.dynParam.ToArray());
+            var funcMethod = Proxy(model).CreateDelegate(Expression.GetFuncType(model.dynType.ToArray()));
+
+            try
+            {
+                return (I)funcMethod.DynamicInvoke(model.dynParam.ToArray());
+            }
+            catch
+            {
+                throw new Exception($"Type: {typeof(S).FullName},Constructor Paramter: {string.Join(",", model.constructorType.Select(a => a.Name))}");
+            }
         }
 
         private static DynamicMethod Proxy(ConstructorModel model, Type attrType = null)

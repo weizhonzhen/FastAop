@@ -19,7 +19,16 @@ namespace FastAop
                 throw new Exception($"aopType class not is FastAopAttribute,class name:{aopType.Name}");
 
             var model = Constructor.Constructor.Get(typeof(T), null);
-            return Proxy(model, aopType).CreateDelegate(Expression.GetFuncType(model.dynType.ToArray())).DynamicInvoke(model.dynParam);
+            var funcMethod = Proxy(model, aopType).CreateDelegate(Expression.GetFuncType(model.dynType.ToArray()));
+
+            try
+            {
+                return funcMethod.DynamicInvoke(model.dynParam.ToArray());
+            }
+            catch
+            {
+                throw new Exception($"Type: {typeof(T).FullName},Constructor Paramter: {string.Join(",", model.constructorType.Select(a => a.Name))}");
+            }
         }
 
         private static DynamicMethod Proxy(ConstructorModel model, Type attrType = null)
@@ -360,10 +369,20 @@ namespace FastAop
 
             var model = Constructor.Constructor.Get(serviceType, null);
 
+            var funcMethod = Proxy(model, aopType).CreateDelegate(Expression.GetFuncType(model.dynType.ToArray()));
+
+
             if (model.dynParam.Count > 0)
-                return Proxy(model, aopType).CreateDelegate(Expression.GetFuncType(model.dynType.ToArray())).DynamicInvoke(model.dynParam.ToArray());
+                try
+                {
+                    return funcMethod.DynamicInvoke(model.dynParam.ToArray());
+                }
+                catch
+                {
+                    throw new Exception($"Type: {serviceType.FullName},Constructor Paramter: {string.Join(",", model.constructorType.Select(a => a.Name))}");
+                }
             else
-                return Proxy(model, aopType).CreateDelegate(Expression.GetFuncType(model.dynType.ToArray())).DynamicInvoke();
+                return funcMethod.DynamicInvoke();
         }
     }
 }
