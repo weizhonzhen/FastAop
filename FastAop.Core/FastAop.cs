@@ -28,9 +28,6 @@ namespace FastAop.Core
 
         public static I Instance<S, I>() where S : class where I : class
         {
-           // if(typeof(S).GetInterfaces().Length==0)
-
-
             var model = Constructor.Constructor.Get(typeof(S), typeof(I));
             var funcMethod = Proxy(model).CreateDelegate(Expression.GetFuncType(model.dynType.ToArray()));
 
