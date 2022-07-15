@@ -141,7 +141,10 @@ namespace FastAop
                 throw new Exception($"interfaceType only Interface class,class name:{model.interfaceType.Name}");
 
             if (model.serviceType.IsInterface)
-                throw new Exception($"serviceType not Interface class,class name:{model.serviceType.Name}");
+                throw new Exception($"serviceType is Interface class,class name:{model.serviceType.Name}");
+
+            if (!model.serviceType.GetInterfaces().ToList().Exists(a => a == model.interfaceType))
+                throw new Exception($"serviceType  getInterfaces class not have Interfaces class:{model.interfaceType.Name}");
 
             if (model.serviceType.IsAbstract && model.serviceType.IsSealed)
                 throw new Exception($"serviceType class is static class not support,class name:{model.serviceType.Name}");

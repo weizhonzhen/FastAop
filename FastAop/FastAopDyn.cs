@@ -27,7 +27,7 @@ namespace FastAop
             var arryType = model.constructorType.Count > 0 ? model.constructorType.ToArray() : Type.EmptyTypes;
 
             if (model.serviceType.IsInterface)
-                throw new Exception($"serviceType not Interface class,class name:{model.serviceType.Name}");
+                throw new Exception($"serviceType is Interface class,class name:{model.serviceType.Name}");
 
             if (model.serviceType.IsAbstract && model.serviceType.IsSealed)
                 throw new Exception($"serviceType class is static class not support,class name:{model.serviceType.Name}");
