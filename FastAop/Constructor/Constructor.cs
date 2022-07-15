@@ -1,4 +1,5 @@
-﻿using FastAop.Model;
+﻿using FastAop;
+using FastAop.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,7 +22,7 @@ namespace FastAop.Constructor
             }
             else if (!paramType.IsInterface && !paramType.GetInterfaces().Any())
             {
-                Dic.SetValueDyn(FastAopDyn._types, paramType, FastAopDyn.Instance(paramType));
+                Dic.SetValueDyn(paramType, FastAopDyn.Instance(paramType));
                 return;
             }
 
@@ -70,7 +71,7 @@ namespace FastAop.Constructor
             }
             else if (!paramType.IsInterface && !paramType.GetInterfaces().Any() && isServiceAttr)
             {
-                Dic.SetValueDyn(FastAopDyn._types, paramType, FastAopDyn.Instance(paramType));
+                Dic.SetValueDyn(paramType, FastAopDyn.Instance(paramType));
                 return;
             }
             else if (!paramType.IsInterface && !paramType.GetInterfaces().Any() && paramType.GetConstructors().Length == 0)
@@ -128,7 +129,9 @@ namespace FastAop.Constructor
                 {
                     model.constructorType.Add(p.ParameterType);
                     model.dynType.Add(p.ParameterType);
-                    if (!p.ParameterType.IsAbstract && !p.ParameterType.IsInterface)
+                    if (!p.ParameterType.IsAbstract && !p.ParameterType.IsInterface && p.ParameterType.isSysType() && !p.ParameterType.IsValueType)
+                        model.dynParam.Add("");
+                    else if (!p.ParameterType.IsAbstract && !p.ParameterType.IsInterface)
                         model.dynParam.Add(Activator.CreateInstance(p.ParameterType));
                     else if (FastAop._types.GetValue(p.ParameterType) == null && p.ParameterType.IsInterface)
                         throw new Exception($"can't find {p.ParameterType.Name} Instance class");
@@ -189,36 +192,36 @@ namespace System.Collections.Generic
             return item;
         }
 
-        internal static Object GetValueDyn(this Dictionary<Type, dynamic> item, Type key)
+        internal static Object GetValueDyn(Type key)
         {
             if (key == null)
                 return null;
 
-            if (item == null)
+            if (FastAopDyn._types == null)
                 return null;
 
-            key = item.Keys.ToList().Find(a => a == key);
+            key = FastAopDyn._types.Keys.ToList().Find(a => a == key);
 
-            if (item.Keys.ToList().Exists(a => a == key))
-                return item[key];
+            if (FastAopDyn._types.Keys.ToList().Exists(a => a == key))
+                return FastAopDyn._types[key];
             else
                 return null;
         }
 
-        internal static Dictionary<Type, dynamic> SetValueDyn(Dictionary<Type, dynamic> item, Type key, dynamic value)
+        internal static void SetValueDyn(Type key, dynamic value)
         {
             if (key == null)
-                return null;
+                return;
 
-            if (item == null)
-                return null;
+            if (FastAopDyn._types == null)
+                return;
 
-            if (item.Keys.ToList().Exists(a => a == key))
-                item[key] = value;
+            if (FastAopDyn._types.Keys.ToList().Exists(a => a == key))
+                FastAopDyn._types[key] = value;
             else
-                item.Add(key, value);
+                FastAopDyn._types.Add(key, value);
 
-            return item;
+            return;
         }
     }
 }
