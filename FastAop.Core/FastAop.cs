@@ -22,7 +22,7 @@ namespace FastAop.Core
             }
             catch
             {
-                throw new Exception($"Type: {serviceType.FullName},Constructor Paramter: {string.Join(",", model.dynParam.Select(a => a.GetType().Name))}");
+                throw new Exception($"Type: {serviceType.FullName},Constructor Paramter: {string.Join(",", model.dynType.Select(a => a.GetType().Name))}");
             }
         }
 
@@ -37,7 +37,7 @@ namespace FastAop.Core
             }
             catch
             {
-                throw new Exception($"Type: {typeof(S).FullName},Constructor Paramter: {string.Join(",", model.dynParam.Select(a => a.GetType().Name))}");
+                throw new Exception($"Type: {typeof(S).FullName},Constructor Paramter: {string.Join(",", model.constructorType.Select(a => a.Name))}");
             }
         }
 
@@ -52,7 +52,7 @@ namespace FastAop.Core
             }
             catch
             {
-                throw new Exception($"Type: {serviceType.FullName},Constructor Paramter: {string.Join(",", model.dynParam.Select(a => a.GetType().Name))}");
+                throw new Exception($"Type: {serviceType.FullName},Constructor Paramter: {string.Join(",", model.constructorType.Select(a => a.Name))}");
             }
         }
 

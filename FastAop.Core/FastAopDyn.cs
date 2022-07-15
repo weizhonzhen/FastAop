@@ -20,7 +20,6 @@ namespace FastAop.Core
 
             var funcMethod = Proxy(model, attrType).CreateDelegate(Expression.GetFuncType(model.dynType.ToArray()));
 
-
             if (model.dynParam.Count > 0)
                 try
                 {
@@ -28,7 +27,7 @@ namespace FastAop.Core
                 }
                 catch
                 {
-                    throw new Exception($"Type: {serviceType.FullName},Constructor Paramter: {string.Join(",", model.dynParam.Select(a => a.GetType().Name))}");
+                    throw new Exception($"Type: {serviceType.FullName},Constructor Paramter: {string.Join(",", model.constructorType.Select(a => a.Name))}");
                 }
             else
                 return funcMethod.DynamicInvoke();
