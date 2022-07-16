@@ -121,8 +121,12 @@ namespace FastAop.Core.Constructor
                 {
                     model.constructorType.Add(p.ParameterType);
                     model.dynType.Add(p.ParameterType);
-                    if (!p.ParameterType.IsAbstract && !p.ParameterType.IsInterface && p.ParameterType.isSysType() && !p.ParameterType.IsValueType)
+                    if (p.ParameterType.isSysType() && !p.ParameterType.IsValueType)
                         model.dynParam.Add(null);
+                    else if (p.ParameterType.isSysType() && p.ParameterType.IsValueType)
+                        model.dynParam.Add(Activator.CreateInstance(p.ParameterType));
+                    else if (!p.ParameterType.IsAbstract && !p.ParameterType.IsInterface && FastAopExtension.serviceProvider.GetService(p.ParameterType) != null)
+                        model.dynParam.Add(FastAopExtension.serviceProvider.GetService(p.ParameterType));
                     else if (!p.ParameterType.IsAbstract && !p.ParameterType.IsInterface)
                         model.dynParam.Add(Activator.CreateInstance(p.ParameterType));
                     else if (FastAopExtension.serviceProvider.GetService(p.ParameterType) == null && p.ParameterType.IsInterface)
