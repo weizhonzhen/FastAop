@@ -129,8 +129,12 @@ namespace FastAop.Constructor
                 {
                     model.constructorType.Add(p.ParameterType);
                     model.dynType.Add(p.ParameterType);
-                    if (!p.ParameterType.IsAbstract && !p.ParameterType.IsInterface && p.ParameterType.isSysType() && !p.ParameterType.IsValueType)
+                    if (p.ParameterType.isSysType() && !p.ParameterType.IsValueType)
                         model.dynParam.Add("");
+                    else if (p.ParameterType.isSysType() && p.ParameterType.IsValueType)
+                        model.dynParam.Add(Activator.CreateInstance(p.ParameterType));
+                    else if (!p.ParameterType.IsAbstract && !p.ParameterType.IsInterface && Dic.GetValueDyn(p.ParameterType) != null)
+                        model.dynParam.Add(Dic.GetValueDyn(p.ParameterType));
                     else if (!p.ParameterType.IsAbstract && !p.ParameterType.IsInterface)
                         model.dynParam.Add(Activator.CreateInstance(p.ParameterType));
                     else if (FastAop._types.GetValue(p.ParameterType) == null && p.ParameterType.IsInterface)
@@ -192,7 +196,7 @@ namespace System.Collections.Generic
             return item;
         }
 
-        internal static Object GetValueDyn(Type key)
+        internal static dynamic GetValueDyn(Type key)
         {
             if (key == null)
                 return null;
