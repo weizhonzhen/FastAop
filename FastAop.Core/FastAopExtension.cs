@@ -34,6 +34,9 @@ namespace Microsoft.Extensions.DependencyInjection
                                 isServiceAttr = true;
                         });
 
+                        if (b.IsGenericType && b.GetGenericArguments().ToList().Select(a => a.FullName).ToList().Exists(n => n == null))
+                            return;
+
                         if (b.IsAbstract && b.IsSealed)
                             return;
 
