@@ -35,6 +35,9 @@ namespace FastAop
                         if (b.IsAbstract && b.IsSealed)
                             return;
 
+                        if (b.IsGenericType && b.GetGenericArguments().ToList().Select(a => a.FullName).ToList().Exists(n => n == null))
+                            return;
+
                         if (b.BaseType == typeof(FastAopAttribute))
                             return;
 
@@ -53,7 +56,7 @@ namespace FastAop
                         if (!b.IsInterface && b.GetInterfaces().Any())
                             _types.SetValue(b.GetInterfaces().First(), FastAop.Instance(b, b.GetInterfaces().First(), aopType));
                         else if (!b.IsInterface && !b.GetInterfaces().Any())
-                           Dic.SetValueDyn(b, FastAopDyn.Instance(b, aopType));
+                            Dic.SetValueDyn(b, FastAopDyn.Instance(b, aopType));
                     });
                 });
             }
@@ -83,6 +86,9 @@ namespace FastAop
                         });
 
                         if (b.IsAbstract && b.IsSealed)
+                            return;
+
+                        if (b.IsGenericType && b.GetGenericArguments().ToList().Select(a => a.FullName).ToList().Exists(n => n == null))
                             return;
 
                         if (b.BaseType == typeof(FastAopAttribute))
@@ -183,6 +189,9 @@ namespace FastAop
             var assembly = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
             var module = assembly.DefineDynamicModule(assemblyName.Name);
             var builder = module.DefineType($"Aop_{assemblyName}", TypeAttributes.Public, null, new Type[] { model.interfaceType });
+
+            //if(model.serviceType.IsGenericType)
+            //    builder.DefineGenericParameters(model.serviceType.GetGenericArguments().ToList().Select(a => a.Name).ToArray());
 
             //Constructor method
             var field = builder.DefineField($"Aop_{model.serviceType.Name}_Field", model.serviceType, FieldAttributes.Private);
