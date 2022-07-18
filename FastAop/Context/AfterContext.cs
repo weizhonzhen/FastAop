@@ -8,6 +8,8 @@ namespace FastAop.Context
 {
     public class AfterContext
     {
+        private object _Result;
+
         public object[] Paramter { get; set; }
 
         public string ServiceType { get; set; }
@@ -23,7 +25,29 @@ namespace FastAop.Context
             internal set { }
         }
 
-        public object Result { get; set; }
+        public object Result
+        {
+            get
+            {
+                return _Result;
+            }
+            set
+            {
+                if (ResultType == typeof(void))
+                    return;
+
+                if (!IsTaskResult && value is Task)
+                    value = BaseResult.GetTaskResult(value);
+
+                if (value.GetType() != ResultType)
+                    throw new Exception($"ServiceName:{(Method.DeclaringType != null ? Method.DeclaringType.Name : MethodName)},Method Name:{MethodName},return Type:{ResultType.Name},but aop set result type :{value.GetType().Name}");
+
+                if (!IsTaskResult)
+                    _Result = Convert.ChangeType(value, ResultType);
+                else
+                    _Result = value;
+            }
+        }
 
         public object TaskResult
         {
