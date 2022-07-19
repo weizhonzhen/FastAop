@@ -289,9 +289,10 @@ namespace Microsoft.Extensions.DependencyInjection
                     if (assembly.IsDynamic)
                         return;
 
-                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace == nameSpaceModel).ToList().ForEach(b =>
+                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceModel)).ToList().ForEach(b =>
                     {
-                        list.Add(b);
+                        if (b.IsPublic && b.IsClass && !b.IsAbstract && !b.IsGenericType)
+                            list.Add(b);
                     });
                 });
             }
