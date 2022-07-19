@@ -26,7 +26,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     if (assembly.IsDynamic)
                         return;
 
-                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace == nameSpaceService).ToList().ForEach(b =>
+                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
                     {
                         var isServiceAttr = false;
                         b.GetMethods().ToList().ForEach(m =>
@@ -96,7 +96,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     if (assembly.IsDynamic)
                         return;
 
-                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace == nameSpaceService).ToList().ForEach(b =>
+                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
                     {
                         if (b.IsGenericType && b.GetGenericArguments().ToList().Select(a => a.FullName).ToList().Exists(n => n == null))
                             return;
@@ -132,7 +132,7 @@ namespace Microsoft.Extensions.DependencyInjection
             return serviceCollection;
         }
 
-        public static IServiceCollection AddFastAopGeneric(this IServiceCollection serviceCollection, string nameSpaceService,string nameSpaceModel)
+        public static IServiceCollection AddFastAopGeneric(this IServiceCollection serviceCollection, string nameSpaceService, string nameSpaceModel)
         {
             if (!string.IsNullOrEmpty(nameSpaceService))
             {
@@ -149,7 +149,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     if (assembly.IsDynamic)
                         return;
 
-                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace == nameSpaceService).ToList().ForEach(b =>
+                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
                     {
                         var isServiceAttr = false;
                         b.GetMethods().ToList().ForEach(m =>
@@ -226,7 +226,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     if (assembly.IsDynamic)
                         return;
 
-                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace == nameSpaceService).ToList().ForEach(b =>
+                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
                     {
                         if (!b.IsGenericType)
                             return;
@@ -245,7 +245,7 @@ namespace Microsoft.Extensions.DependencyInjection
                             Constructor.depth = 0;
                             c.GetParameters().ToList().ForEach(p =>
                             {
-                                Constructor.Param(serviceCollection, p.ParameterType,aopType);
+                                Constructor.Param(serviceCollection, p.ParameterType, aopType);
                                 serviceProvider = serviceCollection.BuildServiceProvider();
                             });
                         });
