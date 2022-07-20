@@ -39,7 +39,7 @@ namespace FastAop.Context
                 if (!IsTaskResult && value is Task)
                     value = BaseResult.GetTaskResult(value);
 
-                if (value.GetType() != ResultType)
+                if (value != null && value.GetType() != ResultType)
                     throw new Exception($"ServiceName:{(Method.DeclaringType != null ? Method.DeclaringType.Name : MethodName)},Method Name:{MethodName},return Type:{ResultType.Name},but aop set result type :{value.GetType().Name}");
 
                 if (!IsTaskResult)
