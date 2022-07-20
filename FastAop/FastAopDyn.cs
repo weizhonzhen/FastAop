@@ -84,10 +84,13 @@ namespace FastAop
                 //Generic Method
                 if (currentMthod.IsGenericMethod)
                 {
-                    method.DefineGenericParameters(currentMthod.GetGenericArguments().ToList().Select(a => a.Name).ToArray());
+                    var param = method.DefineGenericParameters(currentMthod.GetGenericMethodDefinition().GetGenericArguments().ToList().Select(a => a.Name).ToArray());
 
-                    if (currentMthod.GetGenericArguments()[0].GenericParameterAttributes.ToString() != GenericParameterAttributes.None.ToString())
-                        throw new Exception($"serviceName class name:{model.serviceType.Name},method name:{currentMthod.Name}, not support Generic Method constraint");
+                    for (var g = 0; g < param.Length; g++)
+                    {
+                        param[g].SetBaseTypeConstraint(currentMthod.GetGenericMethodDefinition().GetGenericArguments()[g].BaseType);
+                        param[g].SetInterfaceConstraints(currentMthod.GetGenericMethodDefinition().GetGenericArguments()[g].GetInterfaces());
+                    }
                 }
 
                 var mIL = method.GetILGenerator();

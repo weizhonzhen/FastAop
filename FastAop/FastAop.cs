@@ -363,10 +363,13 @@ namespace FastAop
                 //Generic Method
                 if (currentMthod.IsGenericMethod)
                 {
-                    method.DefineGenericParameters(currentMthod.GetGenericArguments().ToList().Select(a => a.Name).ToArray());
-
-                    if (currentMthod.GetGenericArguments()[0].GenericParameterAttributes.ToString() != GenericParameterAttributes.None.ToString())
-                        throw new Exception($"Interface class name:{model.interfaceType.Name},method name:{currentMthod.Name}, not support Generic Method constraint");
+                    var param = method.DefineGenericParameters(currentMthod.GetGenericMethodDefinition().GetGenericArguments().ToList().Select(a => a.Name).ToArray());
+                    
+                    for(var g=0;g< param.Length; g++)
+                    {
+                        param[g].SetBaseTypeConstraint(currentMthod.GetGenericMethodDefinition().GetGenericArguments()[g].BaseType);
+                        param[g].SetInterfaceConstraints(currentMthod.GetGenericMethodDefinition().GetGenericArguments()[g].GetInterfaces());
+                    }
                 }
 
                 var mIL = method.GetILGenerator();
@@ -389,7 +392,7 @@ namespace FastAop
                 }
 
                 //AttributeName
-                var attList = (model.serviceType.GetMethod(currentMthod.Name, mTypes)?.GetCustomAttributes().ToList().Select(a => a.GetType().Name).ToList() ?? new List<string>()).ToArray();
+                var attList = (model.serviceType.GetMethods().ToList().Find(ms => ms == currentMthod)?.GetCustomAttributes().ToList().Select(a => a.GetType().Name).ToList() ?? new List<string>()).ToArray();
                 var AttributeName = mIL.DeclareLocal(typeof(string[]));
                 mIL.Emit(OpCodes.Ldc_I4, attList.Length);
                 mIL.Emit(OpCodes.Newarr, typeof(string));
@@ -470,7 +473,7 @@ namespace FastAop
                 var exceptionMethod = aopAttrType.GetMethod("Exception");
                 var aopAttribute = new List<FastAopAttribute>();
 
-                aopAttribute = model.serviceType.GetMethod(currentMthod.Name, mTypes)?.GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToList() ?? new List<FastAopAttribute>();
+                aopAttribute = model.serviceType.GetMethods().ToList().Find(ms => ms == currentMthod)?.GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToList() ?? new List<FastAopAttribute>();
                 if (attrType != null)
                 {
                     //auto add FastAopAttribute
