@@ -364,11 +364,12 @@ namespace FastAop
                 if (currentMthod.IsGenericMethod)
                 {
                     var param = method.DefineGenericParameters(currentMthod.GetGenericMethodDefinition().GetGenericArguments().ToList().Select(a => a.Name).ToArray());
-                    
-                    for(var g=0;g< param.Length; g++)
+                    for (var g = 0; g < param.Length; g++)
                     {
-                        param[g].SetBaseTypeConstraint(currentMthod.GetGenericMethodDefinition().GetGenericArguments()[g].BaseType);
-                        param[g].SetInterfaceConstraints(currentMthod.GetGenericMethodDefinition().GetGenericArguments()[g].GetInterfaces());
+                        var constraint = currentMthod.GetGenericArguments()[g];
+                        param[g].SetBaseTypeConstraint(constraint.BaseType);
+                        param[g].SetInterfaceConstraints(constraint.GetInterfaces());
+                        param[g].SetGenericParameterAttributes(constraint.GenericParameterAttributes);
                     }
                 }
 
