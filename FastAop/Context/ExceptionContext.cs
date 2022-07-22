@@ -35,25 +35,11 @@ namespace FastAop.Context
                 if (ResultType == typeof(void))
                     return;
 
-                if (!IsTaskResult && value is Task)
-                    value = BaseResult.GetTaskResult(value);
-
-                if (value!=null && !Method.IsGenericMethod && value.GetType() != ResultType && IsReturn)
-                    throw new Exception($"ServiceName:{(Method.DeclaringType != null ? Method.DeclaringType.Name : MethodName)},Method Name:{MethodName},return Type:{ResultType.Name},but aop set result type :{value.GetType().Name}");
-
-                if (!IsTaskResult && !Method.IsGenericMethod)
-                    _Result = Convert.ChangeType(value, ResultType);
-                else
-                    _Result = value;
+                _Result = BaseResult.SetResult(this, value);
             }
             get
             {
-                if (IsTaskResult && !(_Result is Task))
-                    throw new Exception($"serviceName class name:{ServiceType},method name:{Method.Name}, return type is Task, but aop retrun type is {_Result.GetType().Name}");
-                else if (IsTaskResult && ResultType.GenericTypeArguments.Length > 0 && _Result.GetType().GenericTypeArguments.Length > 0 && ResultType.GenericTypeArguments[0] != _Result.GetType().GenericTypeArguments[0])
-                    throw new Exception($"serviceName class name:{ServiceType},method name:{Method.Name}, retrun type is Task<{ResultType.GenericTypeArguments[0].Name}>, but aop retrun type is Task<{_Result.GetType().GenericTypeArguments[0].Name}>");
-                else
-                    return _Result;
+                return BaseResult.GetResult(this, _Result);
             }
         }
 
