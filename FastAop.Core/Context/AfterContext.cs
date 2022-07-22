@@ -36,16 +36,7 @@ namespace FastAop.Core.Context
                 if (ResultType == typeof(void))
                     return;
 
-                if (!IsTaskResult && value is Task)
-                    value = BaseResult.GetTaskResult(value);
-
-                if (value != null && !Method.IsGenericMethod && value.GetType() != ResultType)
-                    throw new Exception($"ServiceName:{(Method.DeclaringType != null ? Method.DeclaringType.Name : MethodName)},Method Name:{MethodName},return Type:{ResultType.Name},but aop set result type :{value.GetType().Name}");
-
-                if (!IsTaskResult && !Method.IsGenericMethod)
-                    _Result = Convert.ChangeType(value, ResultType);
-                else
-                    _Result = value;
+                _Result = BaseResult.SetResult(this, value);
             }
         }
 
