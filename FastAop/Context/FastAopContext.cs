@@ -8,8 +8,11 @@ namespace FastAop.Context
     {
         public static T Resolve<T>()
         {
-            if (typeof(T).IsInterface)
-                return (T)FastAop._types.GetValue(typeof(T));
+            var data = FastAop._types.GetValue(typeof(T));
+            if (typeof(T).IsInterface && data != null)
+                return (T)data;
+            else if (typeof(T).IsInterface && data == null)
+                return default(T);
             else if (!typeof(T).IsInterface && !typeof(T).GetInterfaces().Any() && typeof(T).GetConstructors().Length > 0)
             {
                 var model = Constructor.Constructor.Get(typeof(T), null);
@@ -30,8 +33,11 @@ namespace FastAop.Context
 
         public static dynamic ResolveDyn<T>()
         {
-            if (!typeof(T).GetInterfaces().Any())
-                return FastAopDyn._types.GetValue(typeof(T));
+            dynamic data = Dic.GetValueDyn(typeof(T));
+            if (!typeof(T).GetInterfaces().Any() && data != null)
+                return data;
+            else if (!typeof(T).GetInterfaces().Any() && data == null)
+                return FastAopDyn.Instance(typeof(T));
             else
                 return null;
         }
