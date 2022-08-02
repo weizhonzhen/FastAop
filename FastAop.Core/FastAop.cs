@@ -112,8 +112,6 @@ namespace FastAop.Core
                 //Generic Method
                 if (currentMthod.IsGenericMethod)
                 {
-                    method.DefineGenericParameters(currentMthod.GetGenericArguments().ToList().Select(a => a.Name).ToArray());
-
                     var param = method.DefineGenericParameters(currentMthod.GetGenericMethodDefinition().GetGenericArguments().ToList().Select(a => a.Name).ToArray());
 
                     for (var g = 0; g < param.Length; g++)
@@ -145,7 +143,7 @@ namespace FastAop.Core
                 }
 
                 //AttributeName
-                var attList = model.serviceType.GetMethod(currentMthod.Name, mTypes).GetCustomAttributes().ToList().Select(a => a.GetType().Name).ToArray();
+                var attList = currentMthod.GetCustomAttributes().ToList().Select(a => a.GetType().Name).ToArray();
                 var AttributeName = mIL.DeclareLocal(typeof(string[]));
                 mIL.Emit(OpCodes.Ldc_I4, attList.Length);
                 mIL.Emit(OpCodes.Newarr, typeof(string));
@@ -227,7 +225,7 @@ namespace FastAop.Core
                 var afterMethod = aopAttrType.GetMethod("After");
                 var exceptionMethod = aopAttrType.GetMethod("Exception");
 
-                aopAttribute = model.serviceType.GetMethod(currentMthod.Name, mTypes).GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToList();
+                aopAttribute = currentMthod.GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToList();
                 if (attrType != null)
                 {
                     //auto add FastAopAttribute
