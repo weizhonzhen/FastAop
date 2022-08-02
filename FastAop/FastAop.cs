@@ -393,7 +393,7 @@ namespace FastAop
                 }
 
                 //AttributeName
-                var attList = (model.serviceType.GetMethods().ToList().Find(ms => ms == currentMthod)?.GetCustomAttributes().ToList().Select(a => a.GetType().Name).ToList() ?? new List<string>()).ToArray();
+                var attList = (currentMthod.GetCustomAttributes().ToList().Select(a => a.GetType().Name).ToList() ?? new List<string>()).ToArray();
                 var AttributeName = mIL.DeclareLocal(typeof(string[]));
                 mIL.Emit(OpCodes.Ldc_I4, attList.Length);
                 mIL.Emit(OpCodes.Newarr, typeof(string));
@@ -474,7 +474,7 @@ namespace FastAop
                 var exceptionMethod = aopAttrType.GetMethod("Exception");
                 var aopAttribute = new List<FastAopAttribute>();
 
-                aopAttribute = model.serviceType.GetMethods().ToList().Find(ms => ms == currentMthod)?.GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToList() ?? new List<FastAopAttribute>();
+                aopAttribute = currentMthod.GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToList() ?? new List<FastAopAttribute>();
                 if (attrType != null)
                 {
                     //auto add FastAopAttribute
