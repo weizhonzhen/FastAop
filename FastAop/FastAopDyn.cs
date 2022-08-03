@@ -69,12 +69,12 @@ namespace FastAop
             cIL.Emit(OpCodes.Stfld, field);
             cIL.Emit(OpCodes.Ret);
 
-            var listMethod = model.serviceType.GetMethods(BindingFlags.SuppressChangeType | BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static);
+            var methodList = model.serviceType.GetMethods(BindingFlags.SuppressChangeType | BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static);
 
             //method list
-            for (int m = 0; m < listMethod.Length; m++)
+            for (int m = 0; m < methodList.Length; m++)
             {
-                var currentMthod = listMethod[m];
+                var currentMthod = methodList[m];
                 if (currentMthod.Name == "Equals" || currentMthod.Name == "GetHashCode" || currentMthod.Name == "ToString" || currentMthod.Name == "GetType")
                     continue;
 
@@ -115,7 +115,7 @@ namespace FastAop
                 }
 
                 //AttributeName
-                var attList = currentMthod.GetCustomAttributes().ToList().Select(a => a.GetType().Name).ToArray();
+                var attList = model.serviceType.GetMethod(currentMthod.Name, mTypes).GetCustomAttributes().ToList().Select(a => a.GetType().Name).ToArray();
                 var AttributeName = mIL.DeclareLocal(typeof(string[]));
                 mIL.Emit(OpCodes.Ldc_I4, attList.Length);
                 mIL.Emit(OpCodes.Newarr, typeof(string));
@@ -197,7 +197,7 @@ namespace FastAop
                 var afterMethod = aopAttrType.GetMethod("After");
                 var exceptionMethod = aopAttrType.GetMethod("Exception");
 
-                aopAttribute = currentMthod.GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToList();
+                aopAttribute = model.serviceType.GetMethod(currentMthod.Name, mTypes).GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToList();
                 if (attrType != null)
                 {
                     //auto add FastAopAttribute

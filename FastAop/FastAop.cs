@@ -351,12 +351,12 @@ namespace FastAop
             cIL.Emit(OpCodes.Stfld, field);
             cIL.Emit(OpCodes.Ret);
 
-            var listMethod = model.interfaceType.GetMethods(BindingFlags.SuppressChangeType | BindingFlags.Instance | BindingFlags.Public);
+            var methodList = model.interfaceType.GetMethods(BindingFlags.SuppressChangeType | BindingFlags.Instance | BindingFlags.Public);
 
             //method list
-            for (int m = 0; m < listMethod.Length; m++)
+            for (int m = 0; m < methodList.Length; m++)
             {
-                var currentMthod = listMethod[m];
+                var currentMthod = methodList[m];
                 var mTypes = currentMthod.GetParameters().Select(d => d.ParameterType).ToArray();
                 var method = builder.DefineMethod(currentMthod.Name, MethodAttributes.Public | MethodAttributes.NewSlot | MethodAttributes.Virtual, currentMthod.ReturnType, mTypes);
 
@@ -393,7 +393,7 @@ namespace FastAop
                 }
 
                 //AttributeName
-                var attList = (currentMthod.GetCustomAttributes().ToList().Select(a => a.GetType().Name).ToList() ?? new List<string>()).ToArray();
+                var attList = (model.serviceType.GetMethod(currentMthod.Name, mTypes).GetCustomAttributes().ToList().Select(a => a.GetType().Name).ToList() ?? new List<string>()).ToArray();
                 var AttributeName = mIL.DeclareLocal(typeof(string[]));
                 mIL.Emit(OpCodes.Ldc_I4, attList.Length);
                 mIL.Emit(OpCodes.Newarr, typeof(string));
@@ -474,7 +474,7 @@ namespace FastAop
                 var exceptionMethod = aopAttrType.GetMethod("Exception");
                 var aopAttribute = new List<FastAopAttribute>();
 
-                aopAttribute = currentMthod.GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToList() ?? new List<FastAopAttribute>();
+                aopAttribute = model.serviceType.GetMethod(currentMthod.Name, mTypes).GetCustomAttributes().Where(d => aopAttrType.IsAssignableFrom(d.GetType())).Cast<FastAopAttribute>().OrderBy(d => d.Sort).ToList() ?? new List<FastAopAttribute>();
                 if (attrType != null)
                 {
                     //auto add FastAopAttribute
