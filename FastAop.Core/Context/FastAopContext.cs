@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 
 namespace FastAop.Core.Context
 {
@@ -44,6 +46,62 @@ namespace FastAop.Core.Context
                 return (T)Activator.CreateInstance(typeof(T));
             else
                 throw new Exception($"can't find {typeof(T).Name} Instance class");
+        }
+
+        internal static MethodInfo GetMethod(List<MethodInfo> list, MethodInfo info, Type[] types)
+        {
+            var method = new List<MethodInfo>();
+
+            list = list.FindAll(a => a.Name == info.Name && a.GetParameters().Length == info.GetParameters().Length);
+
+            if (info.ReturnType.IsGenericType)
+            {
+                list = list.FindAll(a => info.ReturnType.IsGenericType && a.ReturnType.GetGenericArguments().Length == info.ReturnType.GetGenericArguments().Length);
+                if (info.ReturnType.GetGenericArguments().Length > 0)
+                {
+                    if (info.ReturnType.GetGenericArguments()[0].IsGenericType)
+                    {
+                        list = list.FindAll(a => a.ReturnType.GetGenericArguments()[0].IsGenericType);
+                        method = list.FindAll(a => a.ReturnType.GetGenericArguments()[0].GetGenericArguments()[0].Name == info.ReturnType.GetGenericArguments()[0].GetGenericArguments()[0].Name);
+
+                        if (info.ReturnType.GetGenericArguments()[0].GetGenericArguments()[0].IsGenericType)
+                        {
+                            list = list.FindAll(a => a.ReturnType.GetGenericArguments()[0].GetGenericArguments()[0].IsGenericType);
+                            method = list.FindAll(a => a.ReturnType.GetGenericArguments()[0].GetGenericArguments()[0].GetGenericArguments()[0].Name == info.ReturnType.GetGenericArguments()[0].GetGenericArguments()[0].GetGenericArguments()[0].Name);
+                        }
+                    }
+                    else
+                        method = list.FindAll(a => a.ReturnType.GetGenericArguments()[0].Name == info.ReturnType.GetGenericArguments()[0].Name);
+                }
+                else
+                    method = list.FindAll(a => a.ReturnType.Name == info.ReturnType.Name);
+            }
+            else
+                method = list.FindAll(a => a.ReturnType.Name == info.ReturnType.Name && a.ReturnType.GetGenericArguments().Length == info.ReturnType.GetGenericArguments().Length);
+
+            if (method.Count == 1)
+                return method[0];
+
+            if (method.Count == 0)
+                return null;
+
+            if (method.Count > 1)
+            {
+                for(int i = 0; i < method.Count; i++)
+                {
+                    var temp = method[i].GetParameters().Select(d => d.ParameterType).ToArray();
+                    for(int j = 0; j < temp.Length; j++)
+                    {
+                        if (temp[j].Name != types[j].Name)
+                            break;
+
+                        if (j + 1 == temp.Length)
+                            return method[i];
+                    }
+                }
+            }
+
+            return null;
         }
     }
 }
