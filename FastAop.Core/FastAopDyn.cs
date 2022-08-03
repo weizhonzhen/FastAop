@@ -76,12 +76,13 @@ namespace FastAop.Core
             cIL.Emit(OpCodes.Stfld, field);
             cIL.Emit(OpCodes.Ret);
 
-            var listMethod = model.serviceType.GetMethods(BindingFlags.SuppressChangeType | BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static);
+            var methodList = model.serviceType.GetMethods(BindingFlags.SuppressChangeType | BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static);
+            var serviceMethodList = model.serviceType.GetMethods().ToList();
 
             //method list
-            for (int m = 0; m < listMethod.Length; m++)
+            for (int m = 0; m < methodList.Length; m++)
             {
-                var currentMthod = listMethod[m];
+                var currentMthod = methodList[m];
                 if (currentMthod.Name == "Equals" || currentMthod.Name == "GetHashCode" || currentMthod.Name == "ToString" || currentMthod.Name == "GetType")
                     continue;
 
