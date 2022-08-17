@@ -5,9 +5,14 @@ in Startup.cs Startup mothod
 ```csharp
 //more aop by 
 services.AddFastAop("FastAop.Core.Test");
+services.AddFastAopGeneric("FastAop.Core.Test.Service", "FastAop.Core.Test.Model"); //Generic type
+services.AddFastAopAutowired();// property get 
+services.AddFastAopAutowiredGeneric("FastAop.Core.Test.Model");  // property get, Generic type
 
 //add Global aop
 services.AddFastAop("FastAop.Core.Test",typeof(LogAop));
+services.AddFastAopGeneric("FastAop.Core.Test.Service", "FastAop.Core.Test.Model", typeof(LogAop)); //Generic type
+
 
 //one aop
 var model = FastAop.Instance<TestAop, ITestAop>();
@@ -16,6 +21,9 @@ dynamic model = FastAopDyn.Instance(typeof(Test_Aop));//not interface class
 
 public class TestAop : ITestAop
 {
+    [Autowired]
+    iTestServer server; //AddFastAopAutowired or AddFastAopAutowiredGeneric
+    
     int _a;
     public TestAop(int a)
     {
