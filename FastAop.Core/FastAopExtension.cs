@@ -1,5 +1,8 @@
 ﻿using FastAop.Core;
 using FastAop.Core.Constructor;
+using FastAop.Core.Factory;
+using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -59,22 +62,41 @@ namespace Microsoft.Extensions.DependencyInjection
                     });
 
                     if (!b.IsInterface && b.GetInterfaces().Any() && isServiceAttr)
+                    {
+                        serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == b.GetInterfaces().First()));
                         serviceCollection.AddScoped(b.GetInterfaces().First(), FastAop.Core.FastAop.Instance(b, b.GetInterfaces().First()).GetType());
+                    }
                     else if (!b.IsInterface && b.GetInterfaces().Any())
+                    {
+                        serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == b));
                         serviceCollection.AddScoped(b.GetInterfaces().First(), b);
+                    }
                     else if (!b.IsInterface && !b.GetInterfaces().Any() && isServiceAttr)
+                    {
+                        serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == b));
                         serviceCollection.AddScoped(b, s => { return FastAopDyn.Instance(b); });
+                    }
                     else if (!b.IsInterface && !b.GetInterfaces().Any() && b.GetConstructors().Length == 0)
+                    {
+                        serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == b));
                         serviceCollection.AddScoped(b, s => { return Activator.CreateInstance(b); });
+                    }
                     else if (!b.IsInterface && !b.GetInterfaces().Any() && b.GetConstructors().Length > 0)
                     {
                         var model = Constructor.Get(b, null);
+                        serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == b));
                         serviceCollection.AddScoped(b, s => { return Activator.CreateInstance(b, model.dynParam.ToArray()); });
                     }
                 });
             });
 
             serviceProvider = serviceCollection.BuildServiceProvider();
+
+            serviceCollection.Remove(serviceCollection.FirstOrDefault(c => c.ServiceType == typeof(IControllerActivator)));
+            serviceCollection.AddSingleton<IControllerActivator, AopControllerFactory>();
+
+            serviceCollection.Remove(serviceCollection.FirstOrDefault(c => c.ServiceType == typeof(IPageModelActivatorProvider)));
+            serviceCollection.AddSingleton<IPageModelActivatorProvider, AopPageFactory>();
 
             serviceCollection.AddFastAopAutowired();
 
@@ -125,13 +147,25 @@ namespace Microsoft.Extensions.DependencyInjection
                     });
 
                     if (!b.IsInterface && b.GetInterfaces().Any())
+                    {
+                        serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == b.GetInterfaces().First()));
                         serviceCollection.AddScoped(b.GetInterfaces().First(), FastAop.Core.FastAop.Instance(b, b.GetInterfaces().First(), aopType).GetType());
+                    }
                     else if (!b.IsInterface && !b.GetInterfaces().Any())
+                    {
+                        serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == b));
                         serviceCollection.AddScoped(b, s => { return FastAopDyn.Instance(b, aopType); });
+                    }
                 });
             });
 
             serviceProvider = serviceCollection.BuildServiceProvider();
+
+            serviceCollection.Remove(serviceCollection.FirstOrDefault(c => c.ServiceType == typeof(IControllerActivator)));
+            serviceCollection.AddSingleton<IControllerActivator, AopControllerFactory>();
+
+            serviceCollection.Remove(serviceCollection.FirstOrDefault(c => c.ServiceType == typeof(IPageModelActivatorProvider)));
+            serviceCollection.AddSingleton<IPageModelActivatorProvider, AopPageFactory>();
 
             serviceCollection.AddFastAopAutowired();
 
@@ -204,6 +238,7 @@ namespace Microsoft.Extensions.DependencyInjection
                             if (!b.IsInterface && b.GetInterfaces().Any())
                             {
                                 var serviceType = b.MakeGenericType(new Type[1] { m });
+                                serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == serviceType.GetInterfaces().First()));
                                 serviceCollection.AddScoped(serviceType.GetInterfaces().First(), FastAop.Core.FastAop.Instance(serviceType, serviceType.GetInterfaces().First()).GetType());
                             }
                         });
@@ -212,6 +247,12 @@ namespace Microsoft.Extensions.DependencyInjection
             });
 
             serviceProvider = serviceCollection.BuildServiceProvider();
+
+            serviceCollection.Remove(serviceCollection.FirstOrDefault(c => c.ServiceType == typeof(IControllerActivator)));
+            serviceCollection.AddSingleton<IControllerActivator, AopControllerFactory>();
+
+            serviceCollection.Remove(serviceCollection.FirstOrDefault(c => c.ServiceType == typeof(IPageModelActivatorProvider)));
+            serviceCollection.AddSingleton<IPageModelActivatorProvider, AopPageFactory>();
 
             serviceCollection.AddFastAopAutowiredGeneric(nameSpaceModel);
 
@@ -277,6 +318,7 @@ namespace Microsoft.Extensions.DependencyInjection
                             if (!b.IsInterface && b.GetInterfaces().Any())
                             {
                                 var serviceType = b.MakeGenericType(new Type[1] { m });
+                                serviceCollection.Remove(serviceCollection.FirstOrDefault(a=>a.ServiceType== serviceType.GetInterfaces().First()));
                                 serviceCollection.AddScoped(serviceType.GetInterfaces().First(), FastAop.Core.FastAop.Instance(serviceType, serviceType.GetInterfaces().First(), aopType).GetType());
                             }
                         });
@@ -285,6 +327,12 @@ namespace Microsoft.Extensions.DependencyInjection
             });
 
             serviceProvider = serviceCollection.BuildServiceProvider();
+
+            serviceCollection.Remove(serviceCollection.FirstOrDefault(c => c.ServiceType == typeof(IControllerActivator)));
+            serviceCollection.AddSingleton<IControllerActivator, AopControllerFactory>();
+
+            serviceCollection.Remove(serviceCollection.FirstOrDefault(c => c.ServiceType == typeof(IPageModelActivatorProvider)));
+            serviceCollection.AddSingleton<IPageModelActivatorProvider, AopPageFactory>();
 
             serviceCollection.AddFastAopAutowiredGeneric(nameSpaceModel);
 
@@ -337,7 +385,7 @@ namespace Microsoft.Extensions.DependencyInjection
                         if (b.IsInterface)
                             obj = serviceProvider.GetService(b);
                         else if (b.GetInterfaces().Any())
-                            obj = serviceProvider.GetService(b.GetInterfaces()[0]);
+                            obj = serviceProvider.GetService(b.GetInterfaces().First());
                         else
                             continue;
 
@@ -346,16 +394,19 @@ namespace Microsoft.Extensions.DependencyInjection
 
                         if (obj.GetType().FullName == "Aop_FastAop.ILGrator.Core")
                         {
-                            if (obj.GetType().GetRuntimeFields().ToList()[0].FieldType.GetConstructors().ToList().Exists(a => a.GetParameters().Length > 0))
-                                throw new Exception($"{item.Name}[Autowired]  not support Constructors {b.FullName}");
-                            temp = temp ?? Activator.CreateInstance(obj.GetType().GetRuntimeFields().ToList()[0].FieldType);
+                            if (temp == null)
+                            {
+                                var type = obj.GetType().GetRuntimeFields().First().FieldType;
+                                var model = Constructor.Get(type, null);
+                                temp = Activator.CreateInstance(type, model.dynParam.ToArray());
+                            }
 
                             if (item.FieldType.IsInterface)
                                 item.SetValue(temp, serviceProvider.GetService(item.FieldType));
                             else
                                 item.SetValue(temp, serviceProvider.GetService(item.FieldType));
 
-                            obj.GetType().GetRuntimeFields().ToList()[0].SetValue(obj, temp);
+                            obj.GetType().GetRuntimeFields().First().SetValue(obj, temp);
                         }
                         else
                             item.SetValue(obj, serviceProvider.GetService(item.FieldType));
@@ -365,11 +416,23 @@ namespace Microsoft.Extensions.DependencyInjection
                         return;
 
                     if (b.GetInterfaces().Any())
-                        serviceCollection.AddScoped(b.GetInterfaces()[0], s => { return obj; });
+                    {
+                        serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == b.GetInterfaces().First()));
+                        serviceCollection.AddScoped(b.GetInterfaces().First(), s => { return obj; });
+                    }
                     else
+                    {
+                        serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == b));
                         serviceCollection.AddScoped(b, s => { return obj; });
+                    }
                 });
             });
+
+            serviceCollection.Remove(serviceCollection.FirstOrDefault(c => c.ServiceType == typeof(IControllerActivator)));
+            serviceCollection.AddSingleton<IControllerActivator, AopControllerFactory>();
+
+            serviceCollection.Remove(serviceCollection.FirstOrDefault(c => c.ServiceType == typeof(IPageModelActivatorProvider)));
+            serviceCollection.AddSingleton<IPageModelActivatorProvider, AopPageFactory>();
 
             serviceProvider = serviceCollection.BuildServiceProvider();
             return serviceCollection;
@@ -440,9 +503,15 @@ namespace Microsoft.Extensions.DependencyInjection
 
                             if (obj.GetType().FullName == "Aop_FastAop.ILGrator.Core")
                             {
-                                if (obj.GetType().GetRuntimeFields().ToList()[0].FieldType.GetConstructors().ToList().Exists(a => a.GetParameters().Length > 0))
+                                if (obj.GetType().GetRuntimeFields().First().FieldType.GetConstructors().ToList().Exists(a => a.GetParameters().Length > 0))
                                     throw new Exception($"{item.Name}[Autowired]  not support Constructors {b.FullName}");
-                                temp = temp ?? Activator.CreateInstance(obj.GetType().GetRuntimeFields().ToList()[0].FieldType);
+
+                                if(temp == null)
+                                {
+                                    var tempType = obj.GetType().GetRuntimeFields().First().FieldType;
+                                    var model = Constructor.Get(tempType, null);
+                                    temp = Activator.CreateInstance(tempType,model.dynParam.ToArray());
+                                }
                                 var newItem = temp.GetType().GetRuntimeFields().ToList().Find(a => a.FieldType == item.FieldType && a.Name == item.Name);
 
                                 if (item.FieldType.IsInterface)
@@ -450,7 +519,7 @@ namespace Microsoft.Extensions.DependencyInjection
                                 else
                                     newItem.SetValue(temp, serviceProvider.GetService(item.FieldType));
 
-                                obj.GetType().GetRuntimeFields().ToList()[0].SetValue(obj, temp);
+                                obj.GetType().GetRuntimeFields().First().SetValue(obj, temp);
                             }
                             else
                             {
@@ -467,12 +536,24 @@ namespace Microsoft.Extensions.DependencyInjection
                     {
                         var type = b.MakeGenericType(new Type[1] { m });
                         if (b.GetInterfaces().Any())
-                            serviceCollection.AddScoped(type.GetInterfaces()[0], s => { return obj; });
+                        {
+                            serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == type.GetInterfaces().First()));
+                            serviceCollection.AddScoped(type.GetInterfaces().First(), s => { return obj; });
+                        }
                         else
+                        {
+                            serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == type));
                             serviceCollection.AddScoped(type, s => { return obj; });
+                        }
                     });
                 });
             });
+
+            serviceCollection.Remove(serviceCollection.FirstOrDefault(c => c.ServiceType == typeof(IControllerActivator)));
+            serviceCollection.AddSingleton<IControllerActivator, AopControllerFactory>();
+
+            serviceCollection.Remove(serviceCollection.FirstOrDefault(c => c.ServiceType == typeof(IPageModelActivatorProvider)));
+            serviceCollection.AddSingleton<IPageModelActivatorProvider, AopPageFactory>();
 
             serviceProvider = serviceCollection.BuildServiceProvider();
             return serviceCollection;
