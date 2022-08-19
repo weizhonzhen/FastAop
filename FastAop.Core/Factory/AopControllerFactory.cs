@@ -1,21 +1,29 @@
-﻿using FastAop.Core.Constructor;
-using Microsoft.AspNetCore.Mvc.RazorPages;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
+using FastAop.Core.Constructor;
 using System.Reflection;
+using System.Collections.Generic;
 
 namespace FastAop.Core.Factory
 {
-    public class AopPageFactory : IPageModelActivatorProvider
+    public class AopControllerFactory : IControllerActivator
     {
         private Dictionary<Type, object> cache = new Dictionary<Type, object>();
-        public Func<PageContext, object> CreateActivator(CompiledPageActionDescriptor descriptor)
+        public object Create(ControllerContext controllerContext)
         {
-            if (descriptor == null)
-                throw new ArgumentNullException(nameof(descriptor));
+            if (controllerContext == null)
+                throw new ArgumentNullException(nameof(controllerContext));
 
-            var type = descriptor.ModelTypeInfo.AsType();
+            if (controllerContext.ActionDescriptor == null)
+                throw new ArgumentException(nameof(ControllerContext.ActionDescriptor));
+
+            var controllerTypeInfo = controllerContext.ActionDescriptor.ControllerTypeInfo;
+            if (controllerTypeInfo == null)
+                throw new ArgumentException(nameof(controllerContext.ActionDescriptor.ControllerTypeInfo));
+
+            var type = controllerTypeInfo.AsType();
             object instance = null;
 
             cache.TryGetValue(type, out instance);
@@ -42,15 +50,18 @@ namespace FastAop.Core.Factory
                 cache.Add(type, instance);
             }
 
-            return _ => instance;
+            return instance;
         }
 
-        public Action<PageContext, object> CreateReleaser(CompiledPageActionDescriptor descriptor)
+        public void Release(ControllerContext context, object controller)
         {
-            if (descriptor == null)
-                throw new ArgumentNullException(nameof(descriptor));
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
 
-            return (context, model) => { };
+            if (controller == null)
+                throw new ArgumentNullException(nameof(controller));
+
+            (controller as IDisposable)?.Dispose();
         }
     }
 }
