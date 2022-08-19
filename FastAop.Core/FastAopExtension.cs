@@ -25,6 +25,8 @@ namespace Microsoft.Extensions.DependencyInjection
                     try { Assembly.Load(a.Name); } catch (Exception ex) { }
             });
 
+            serviceProvider = serviceCollection.BuildServiceProvider();
+
             AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(assembly =>
             {
                 if (assembly.IsDynamic)
@@ -117,6 +119,8 @@ namespace Microsoft.Extensions.DependencyInjection
                     try { Assembly.Load(a.Name); } catch (Exception) { }
             });
 
+            serviceProvider = serviceCollection.BuildServiceProvider();
+
             AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(assembly =>
             {
                 if (assembly.IsDynamic)
@@ -183,6 +187,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     try { Assembly.Load(a.Name); } catch (Exception ex) { }
             });
 
+            serviceProvider = serviceCollection.BuildServiceProvider();
             var list = InitModelType(nameSpaceModel);
 
             AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(assembly =>
@@ -270,6 +275,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     try { Assembly.Load(a.Name); } catch (Exception ex) { }
             });
 
+            serviceProvider = serviceCollection.BuildServiceProvider();
             var list = InitModelType(nameSpaceModel);
 
             AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(assembly =>
@@ -503,9 +509,6 @@ namespace Microsoft.Extensions.DependencyInjection
 
                             if (obj.GetType().FullName == "Aop_FastAop.ILGrator.Core")
                             {
-                                if (obj.GetType().GetRuntimeFields().First().FieldType.GetConstructors().ToList().Exists(a => a.GetParameters().Length > 0))
-                                    throw new Exception($"{item.Name}[Autowired]  not support Constructors {b.FullName}");
-
                                 if(temp == null)
                                 {
                                     var tempType = obj.GetType().GetRuntimeFields().First().FieldType;
