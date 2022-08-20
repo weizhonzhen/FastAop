@@ -1,19 +1,23 @@
-﻿using System;
-using System.Web.Mvc;
-using System.Web.Routing;
-using System.Reflection;
-using FastAop.Constructor;
+﻿using FastAop.Constructor;
+using System;
 using System.Collections.Generic;
+using System.Net.Http;
+using System.Reflection;
+using System.Web.Http.Controllers;
+using System.Web.Http.Dispatcher;
 
 namespace FastAop.Factory
 {
-    public class AopMvcFactory : DefaultControllerFactory
+    public class AopWebApiFactory : IHttpControllerActivator
     {
         private Dictionary<Type, object> cache = new Dictionary<Type, object>();
-        protected override IController GetControllerInstance(RequestContext requestContext, Type controllerType)
+        public IHttpController Create(HttpRequestMessage request, HttpControllerDescriptor controllerDescriptor, Type controllerType)
         {
-            if (requestContext == null)
-                throw new ArgumentNullException(nameof(requestContext));
+            if (request == null)
+                throw new ArgumentNullException(nameof(request));
+
+            if (controllerDescriptor == null)
+                throw new ArgumentNullException(nameof(controllerDescriptor));
 
             if (controllerType == null)
                 throw new ArgumentException(nameof(controllerType));
@@ -43,7 +47,8 @@ namespace FastAop.Factory
                 cache.Add(controllerType, instance);
             }
 
-            return (IController)instance;
+            return (IHttpController)instance;
+
         }
     }
 }
