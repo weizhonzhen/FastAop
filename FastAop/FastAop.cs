@@ -1,4 +1,6 @@
-﻿using FastAop.Context;
+﻿using FastAop.Constructor;
+using FastAop.Context;
+using FastAop.Factory;
 using FastAop.Model;
 using System;
 using System.Collections.Generic;
@@ -6,76 +8,97 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
+using static FastAop.FastAop;
 
 namespace FastAop
 {
     public static class FastAop
     {
+        public enum WebType
+        {
+            Mvc = 0,
+            WebApi = 1,
+            MvcAndWebApi = 2,
+            Null = 3
+        }
+
         internal static Dictionary<Type, object> _types = new Dictionary<Type, object>();
 
-        public static void Init(string nameSpaceService, Type aopType)
+        public static void Init(string nameSpaceService, Type aopType, WebType type)
         {
+            if (string.IsNullOrEmpty(nameSpaceService))
+                return;
+
             if (aopType.BaseType != typeof(FastAopAttribute))
                 throw new Exception($"aopType class not is FastAopAttribute,class name:{aopType.Name}");
 
-            if (!string.IsNullOrEmpty(nameSpaceService))
+            Assembly.GetCallingAssembly().GetReferencedAssemblies().ToList().ForEach(a =>
             {
-                Assembly.GetCallingAssembly().GetReferencedAssemblies().ToList().ForEach(a =>
-                {
-                    if (!AppDomain.CurrentDomain.GetAssemblies().ToList().Exists(b => b.GetName().Name == a.Name))
-                        try { Assembly.Load(a.Name); } catch (Exception) { }
-                });
+                if (!AppDomain.CurrentDomain.GetAssemblies().ToList().Exists(b => b.GetName().Name == a.Name))
+                    try { Assembly.Load(a.Name); } catch (Exception) { }
+            });
 
-                AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(assembly =>
+            AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(assembly =>
+            {
+                if (assembly.IsDynamic)
+                    return;
+                assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
                 {
-                    if (assembly.IsDynamic)
+                    if (b.IsAbstract && b.IsSealed)
                         return;
-                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
+
+                    if (b.IsGenericType && b.GetGenericArguments().ToList().Select(a => a.FullName).ToList().Exists(n => n == null))
+                        return;
+
+                    if (b.BaseType == typeof(FastAopAttribute))
+                        return;
+
+                    if (b.BaseType == typeof(Attribute))
+                        return;
+
+                    b.GetConstructors().ToList().ForEach(c =>
                     {
-                        if (b.IsAbstract && b.IsSealed)
-                            return;
-
-                        if (b.IsGenericType && b.GetGenericArguments().ToList().Select(a => a.FullName).ToList().Exists(n => n == null))
-                            return;
-
-                        if (b.BaseType == typeof(FastAopAttribute))
-                            return;
-
-                        if (b.BaseType == typeof(Attribute))
-                            return;
-
-                        b.GetConstructors().ToList().ForEach(c =>
+                        Constructor.Constructor.depth = 0;
+                        c.GetParameters().ToList().ForEach(p =>
                         {
-                            Constructor.Constructor.depth = 0;
-                            c.GetParameters().ToList().ForEach(p =>
-                            {
-                                Constructor.Constructor.Param(p.ParameterType, aopType);
-                            });
+                            Constructor.Constructor.Param(p.ParameterType, aopType);
                         });
-
-                        if (!b.IsInterface && b.GetInterfaces().Any())
-                            _types.SetValue(b.GetInterfaces().First(), FastAop.Instance(b, b.GetInterfaces().First(), aopType));
-                        else if (!b.IsInterface && !b.GetInterfaces().Any())
-                            Dic.SetValueDyn(b, FastAopDyn.Instance(b, aopType));
                     });
+
+                    if (!b.IsInterface && b.GetInterfaces().Any())
+                        _types.SetValue(b.GetInterfaces().First(), FastAop.Instance(b, b.GetInterfaces().First(), aopType));
+                    else if (!b.IsInterface && !b.GetInterfaces().Any())
+                        Dic.SetValueDyn(b, FastAopDyn.Instance(b, aopType));
                 });
-            }
+            });
+
+            if (type == WebType.Mvc)
+                System.Web.Mvc.ControllerBuilder.Current.SetControllerFactory(new AopMvcFactory());
+
+            if (type == WebType.WebApi)
+                System.Web.Http.GlobalConfiguration.Configuration.Services.Replace(typeof(System.Web.Http.Dispatcher.IHttpControllerActivator), new AopWebApiFactory());
+
+            InitAutowired(type);
         }
 
-        public static void Init(string nameSpaceService)
+        public static void Init(string nameSpaceService, WebType type)
         {
-            if (!string.IsNullOrEmpty(nameSpaceService))
-            {
-                Assembly.GetCallingAssembly().GetReferencedAssemblies().ToList().ForEach(a =>
-                {
-                    if (!AppDomain.CurrentDomain.GetAssemblies().ToList().Exists(b => b.GetName().Name == a.Name))
-                        try { Assembly.Load(a.Name); } catch (Exception) { }
-                });
+            if (string.IsNullOrEmpty(nameSpaceService))
+                return;
 
-                AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(assembly =>
+            Assembly.GetCallingAssembly().GetReferencedAssemblies().ToList().ForEach(a =>
+            {
+                if (!AppDomain.CurrentDomain.GetAssemblies().ToList().Exists(b => b.GetName().Name == a.Name))
+                    try { Assembly.Load(a.Name); } catch (Exception) { }
+            });
+
+            AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(assembly =>
+            {
+                if (assembly.IsDynamic)
+                    return;
+
+                try
                 {
-                    if (assembly.IsDynamic)
-                        return;
                     assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
                     {
                         var isServiceAttr = false;
@@ -111,27 +134,38 @@ namespace FastAop
                         else if (!b.IsInterface && !b.GetInterfaces().Any())
                             Dic.SetValueDyn(b, FastAopDyn.Instance(b));
                     });
-                });
-            }
+                } catch { }
+            });
+
+            if (type == WebType.Mvc)
+                System.Web.Mvc.ControllerBuilder.Current.SetControllerFactory(new AopMvcFactory());
+
+            if (type == WebType.WebApi)
+                System.Web.Http.GlobalConfiguration.Configuration.Services.Replace(typeof(System.Web.Http.Dispatcher.IHttpControllerActivator), new AopWebApiFactory());
+
+            InitAutowired(type);
         }
 
-        public static void InitGeneric(string nameSpaceService, string nameSpaceModel)
+        public static void InitGeneric(string nameSpaceService, string nameSpaceModel, WebType type)
         {
-            if (!string.IsNullOrEmpty(nameSpaceService))
+            if (string.IsNullOrEmpty(nameSpaceService))
+                return;
+
+            Assembly.GetCallingAssembly().GetReferencedAssemblies().ToList().ForEach(a =>
             {
-                Assembly.GetCallingAssembly().GetReferencedAssemblies().ToList().ForEach(a =>
+                if (!AppDomain.CurrentDomain.GetAssemblies().ToList().Exists(b => b.GetName().Name == a.Name))
+                    try { Assembly.Load(a.Name); } catch (Exception) { }
+            });
+
+            var list = InitModelType(nameSpaceModel);
+
+            AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(assembly =>
+            {
+                if (assembly.IsDynamic)
+                    return;
+
+                try
                 {
-                    if (!AppDomain.CurrentDomain.GetAssemblies().ToList().Exists(b => b.GetName().Name == a.Name))
-                        try { Assembly.Load(a.Name); } catch (Exception) { }
-                });
-
-                var list = InitModelType(nameSpaceModel);
-
-                AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(assembly =>
-                {
-                    if (assembly.IsDynamic)
-                        return;
-
                     assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
                     {
                         var isServiceAttr = false;
@@ -169,72 +203,253 @@ namespace FastAop
                                 if (!b.IsInterface && b.GetInterfaces().Any())
                                 {
                                     var serviceType = b.MakeGenericType(new Type[1] { m });
-                                    _types.SetValue(serviceType.GetInterfaces().First(), FastAop.Instance(serviceType, serviceType.GetInterfaces().First()));
+                                    if (b.Namespace == "FastData.Repository")
+                                        _types.SetValue(serviceType.GetInterfaces().First(), Activator.CreateInstance(serviceType));
+                                    else
+                                        _types.SetValue(serviceType.GetInterfaces().First(), FastAop.Instance(serviceType, serviceType.GetInterfaces().First()));
                                 }
                             });
                         }
                     });
-                });
-            }
+                } catch { }
+            });
+
+            if (type == WebType.Mvc)
+                System.Web.Mvc.ControllerBuilder.Current.SetControllerFactory(new AopMvcFactory());
+
+            if (type == WebType.WebApi)
+                System.Web.Http.GlobalConfiguration.Configuration.Services.Replace(typeof(System.Web.Http.Dispatcher.IHttpControllerActivator), new AopWebApiFactory());
+
+            InitAutowiredGeneric(nameSpaceModel,type);
         }
 
-        public static void InitGeneric(string nameSpaceService, string nameSpaceModel, Type aopType)
+        public static void InitGeneric(string nameSpaceService, string nameSpaceModel, Type aopType, WebType type)
         {
             if (aopType.BaseType != typeof(FastAopAttribute))
                 throw new Exception($"aopType class not is FastAopAttribute,class name:{aopType.Name}");
 
-            if (!string.IsNullOrEmpty(nameSpaceService))
+            if (string.IsNullOrEmpty(nameSpaceService))
+                return;
+
+            Assembly.GetCallingAssembly().GetReferencedAssemblies().ToList().ForEach(a =>
             {
-                Assembly.GetCallingAssembly().GetReferencedAssemblies().ToList().ForEach(a =>
-                {
-                    if (!AppDomain.CurrentDomain.GetAssemblies().ToList().Exists(b => b.GetName().Name == a.Name))
-                        try { Assembly.Load(a.Name); } catch (Exception) { }
-                });
+                if (!AppDomain.CurrentDomain.GetAssemblies().ToList().Exists(b => b.GetName().Name == a.Name))
+                    try { Assembly.Load(a.Name); } catch (Exception) { }
+            });
 
-                var list = InitModelType(nameSpaceModel);
+            var list = InitModelType(nameSpaceModel);
 
-                AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(assembly =>
+            AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(assembly =>
+            {
+                if (assembly.IsDynamic)
+                    return;
+
+                assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
                 {
-                    if (assembly.IsDynamic)
+                    if (b.IsAbstract && b.IsSealed)
                         return;
 
-                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
+                    if (!b.IsGenericType)
+                        return;
+
+                    if (b.BaseType == typeof(FastAopAttribute))
+                        return;
+
+                    if (b.BaseType == typeof(Attribute))
+                        return;
+
+                    if (b.IsGenericType)
                     {
-                        if (b.IsAbstract && b.IsSealed)
-                            return;
-
-                        if (!b.IsGenericType)
-                            return;
-
-                        if (b.BaseType == typeof(FastAopAttribute))
-                            return;
-
-                        if (b.BaseType == typeof(Attribute))
-                            return;
-
-                        if (b.IsGenericType)
+                        list.ForEach(m =>
                         {
+                            b.GetConstructors().ToList().ForEach(c =>
+                            {
+                                Constructor.Constructor.depth = 0;
+                                c.GetParameters().ToList().ForEach(p =>
+                                {
+                                    Constructor.Constructor.Param(p.ParameterType, aopType);
+                                });
+                            });
+
+                            if (!b.IsInterface && b.GetInterfaces().Any())
+                            {
+                                var serviceType = b.MakeGenericType(new Type[1] { m });
+                                _types.SetValue(serviceType.GetInterfaces().First(), FastAop.Instance(serviceType, serviceType.GetInterfaces().First(), aopType));
+                            }
+                        });
+                    }
+                });
+            });
+
+            if (type == WebType.Mvc)
+                System.Web.Mvc.ControllerBuilder.Current.SetControllerFactory(new AopMvcFactory());
+
+            if (type == WebType.WebApi)
+                System.Web.Http.GlobalConfiguration.Configuration.Services.Replace(typeof(System.Web.Http.Dispatcher.IHttpControllerActivator), new AopWebApiFactory());
+
+            InitAutowiredGeneric(nameSpaceModel,type);
+        }
+
+        private static void InitAutowired(WebType webType)
+        {
+            AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(assembly =>
+            {
+                if (assembly.IsDynamic)
+                    return;
+                try
+                {
+                    assembly.ExportedTypes.ToList().ForEach(b =>
+                    {
+                        object obj = null, temp = null;
+
+                        foreach (var item in b.GetRuntimeFields())
+                        {
+                            if (item.GetCustomAttribute<Autowired>() == null)
+                                continue;
+
+                            if (b.IsGenericType)
+                                continue;
+
+                            if (item.FieldType.isSysType())
+                                throw new Exception($"{item.Name} is system type not support");
+
+                            if (_types.GetValue(item.FieldType) == null && item.FieldType.IsGenericType)
+                                throw new Exception($"FastAop.InitGeneric Method first，{item.FieldType.FullName} is Generic Type");
+
+                            if (_types.GetValue(item.FieldType) == null && item.FieldType.IsGenericType)
+                                throw new Exception($"FastAop.InitGeneric Method first，{item.FieldType.FullName} is Generic Type");
+
+                            if (b.IsInterface)
+                                obj = _types.GetValue(b);
+                            else if (b.GetInterfaces().Any())
+                                obj = _types.GetValue(b.GetInterfaces().First());
+                            else
+                                continue;
+
+                            if (obj == null)
+                                continue;
+
+                            if (obj.GetType().FullName == "Aop_FastAop.ILGrator")
+                            {
+                                if (temp == null)
+                                {
+                                    var type = obj.GetType().GetRuntimeFields().First().FieldType;
+                                    var model = Constructor.Constructor.Get(type, null);
+                                    temp = Activator.CreateInstance(type, model.dynParam.ToArray());
+                                }
+
+                                if (item.FieldType.IsInterface)
+                                    item.SetValue(temp, _types.GetValue(item.FieldType));
+                                else
+                                    item.SetValue(temp, Dic.GetValueDyn(item.FieldType));
+
+                                obj.GetType().GetRuntimeFields().First().SetValue(obj, temp);
+                            }
+                            else
+                                item.SetValue(obj, _types.GetValue(item.FieldType));
+                        }
+
+                        if (obj == null)
+                            return;
+
+                        if (b.GetInterfaces().Any())
+                            _types.SetValue(b.GetInterfaces().First(), obj);
+                        else
+                            Dic.SetValueDyn(b, obj);
+                    });
+                } catch { }
+            });
+        }
+
+        private static void InitAutowiredGeneric(string nameSpaceModel, WebType webType)
+        {
+            var list = InitModelType(nameSpaceModel);
+
+            AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(assembly =>
+            {
+                if (assembly.IsDynamic)
+                    return;
+
+                try
+                {
+                    assembly.ExportedTypes.ToList().ForEach(b =>
+                    {
+                        object obj = null, temp = null;
+
+                        foreach (var item in b.GetRuntimeFields())
+                        {
+                            if (item.GetCustomAttribute<Autowired>() == null)
+                                continue;
+
+                            if (!b.IsGenericType)
+                                continue;
+
+                            if (item.FieldType.isSysType())
+                                throw new Exception($"{item.Name} is system type not support");
+
+                            if (_types.GetValue(item.FieldType) == null)
+                                FastAop.Init(b.Namespace, webType);
+
+                            if (_types.GetValue(item.FieldType) == null && item.FieldType.IsGenericType)
+                                throw new Exception($"FastAop.InitGeneric Method，{b.FullName} Field {item.FieldType.FullName} is Generic Type");
+
+                            if (_types.GetValue(item.FieldType) == null)
+                                throw new Exception($"FastAop.Init Method，{b.FullName} Field {item.FieldType.FullName} not in ServiceCollection");
+
+                            if (!b.IsInterface && !b.GetInterfaces().Any())
+                                continue;
+
                             list.ForEach(m =>
                             {
-                                b.GetConstructors().ToList().ForEach(c =>
-                                {
-                                    Constructor.Constructor.depth = 0;
-                                    c.GetParameters().ToList().ForEach(p =>
-                                    {
-                                        Constructor.Constructor.Param(p.ParameterType, aopType);
-                                    });
-                                });
+                                var type = b.MakeGenericType(new Type[1] { m });
+                                if (b.IsInterface)
+                                    obj = _types.GetValue(type);
 
-                                if (!b.IsInterface && b.GetInterfaces().Any())
+                                if (b.GetInterfaces().Any())
+                                    obj = _types.GetValue(type.GetInterfaces().First());
+
+                                if (obj == null)
+                                    return;
+
+                                if (obj.GetType().FullName == "Aop_FastAop.ILGrator")
                                 {
-                                    var serviceType = b.MakeGenericType(new Type[1] { m });
-                                    _types.SetValue(serviceType.GetInterfaces().First(), FastAop.Instance(serviceType, serviceType.GetInterfaces().First(), aopType));
+                                    if (temp == null)
+                                    {
+                                        var tempType = obj.GetType().GetRuntimeFields().First().FieldType;
+                                        var model = Constructor.Constructor.Get(tempType, null);
+                                        temp = Activator.CreateInstance(tempType, model.dynParam.ToArray());
+                                    }
+                                    var newItem = temp.GetType().GetRuntimeFields().ToList().Find(a => a.FieldType == item.FieldType && a.Name == item.Name);
+
+                                    if (item.FieldType.IsInterface)
+                                        newItem.SetValue(temp, _types.GetValue(item.FieldType));
+                                    else
+                                        newItem.SetValue(temp, Dic.GetValueDyn(item.FieldType));
+
+                                    obj.GetType().GetRuntimeFields().First().SetValue(obj, temp);
+                                }
+                                else
+                                {
+                                    var newItem = obj.GetType().GetRuntimeFields().ToList().Find(a => a.FieldType == item.FieldType && a.Name == item.Name);
+                                    newItem.SetValue(obj, _types.GetValue(item.FieldType));
                                 }
                             });
                         }
+
+                        if (obj == null)
+                            return;
+
+                        list.ForEach(m =>
+                        {
+                            var type = b.MakeGenericType(new Type[1] { m });
+                            if (b.GetInterfaces().Any())
+                                _types.SetValue(type.GetInterfaces().First(), obj);
+                            else
+                                Dic.SetValueDyn(type, obj);
+                        });
                     });
-                });
-            }
+                } catch { }
+            });
         }
 
         private static List<Type> InitModelType(string nameSpaceModel)
@@ -247,11 +462,16 @@ namespace FastAop
                     if (assembly.IsDynamic)
                         return;
 
-                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceModel)).ToList().ForEach(b =>
+                    try
                     {
-                        if (b.IsPublic && b.IsClass && !b.IsAbstract && !b.IsGenericType)
-                            list.Add(b);
-                    });
+                        assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceModel)).ToList().ForEach(b =>
+                        {
+                            if (b.IsPublic && b.IsClass && !b.IsAbstract && !b.IsGenericType)
+                                list.Add(b);
+                        });
+                    } catch { }
+
+                   
                 });
             }
             return list;
