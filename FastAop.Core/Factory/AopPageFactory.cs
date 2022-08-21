@@ -2,14 +2,14 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Reflection;
 
 namespace FastAop.Core.Factory
 {
     public class AopPageFactory : IPageModelActivatorProvider
     {
-        private Dictionary<Type, object> cache = new Dictionary<Type, object>();
+        private ConcurrentDictionary<Type, object> cache = new ConcurrentDictionary<Type, object>();
         public Func<PageContext, object> CreateActivator(CompiledPageActionDescriptor descriptor)
         {
             if (descriptor == null)
@@ -39,7 +39,7 @@ namespace FastAop.Core.Factory
                     item.SetValue(instance, FastAopExtension.serviceProvider.GetService(item.FieldType));
                 }
 
-                cache.Add(type, instance);
+                cache.TryAdd(type, instance);
             }
 
             return _ => instance;

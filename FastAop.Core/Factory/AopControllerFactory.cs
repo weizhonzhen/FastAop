@@ -4,13 +4,13 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using FastAop.Core.Constructor;
 using System.Reflection;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 
 namespace FastAop.Core.Factory
 {
     public class AopControllerFactory : IControllerActivator
     {
-        private Dictionary<Type, object> cache = new Dictionary<Type, object>();
+        private ConcurrentDictionary<Type, object> cache = new ConcurrentDictionary<Type, object>();
         public object Create(ControllerContext controllerContext)
         {
             if (controllerContext == null)
@@ -47,7 +47,7 @@ namespace FastAop.Core.Factory
                     item.SetValue(instance, FastAopExtension.serviceProvider.GetService(item.FieldType));
                 }
 
-                cache.Add(type, instance);
+                cache.TryAdd(type, instance);
             }
 
             return instance;
