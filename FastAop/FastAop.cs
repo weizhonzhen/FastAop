@@ -8,7 +8,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
-using static FastAop.FastAop;
+using ExceptionContext = FastAop.Context.ExceptionContext;
 
 namespace FastAop
 {
@@ -72,11 +72,20 @@ namespace FastAop
                 });
             });
 
+            if (type == WebType.Null)
+                return;
+
             if (type == WebType.Mvc)
                 System.Web.Mvc.ControllerBuilder.Current.SetControllerFactory(new AopMvcFactory());
 
             if (type == WebType.WebApi)
                 System.Web.Http.GlobalConfiguration.Configuration.Services.Replace(typeof(System.Web.Http.Dispatcher.IHttpControllerActivator), new AopWebApiFactory());
+
+            if (type == WebType.MvcAndWebApi)
+            {
+                System.Web.Mvc.ControllerBuilder.Current.SetControllerFactory(new AopMvcFactory());
+                System.Web.Http.GlobalConfiguration.Configuration.Services.Replace(typeof(System.Web.Http.Dispatcher.IHttpControllerActivator), new AopWebApiFactory());
+            }
 
             InitAutowired(type);
         }
@@ -137,11 +146,20 @@ namespace FastAop
                 } catch { }
             });
 
+            if (type == WebType.Null)
+                return;
+
             if (type == WebType.Mvc)
                 System.Web.Mvc.ControllerBuilder.Current.SetControllerFactory(new AopMvcFactory());
 
             if (type == WebType.WebApi)
                 System.Web.Http.GlobalConfiguration.Configuration.Services.Replace(typeof(System.Web.Http.Dispatcher.IHttpControllerActivator), new AopWebApiFactory());
+
+            if (type == WebType.MvcAndWebApi)
+            {
+                System.Web.Mvc.ControllerBuilder.Current.SetControllerFactory(new AopMvcFactory());
+                System.Web.Http.GlobalConfiguration.Configuration.Services.Replace(typeof(System.Web.Http.Dispatcher.IHttpControllerActivator), new AopWebApiFactory());
+            }
 
             InitAutowired(type);
         }
@@ -220,6 +238,12 @@ namespace FastAop
             if (type == WebType.WebApi)
                 System.Web.Http.GlobalConfiguration.Configuration.Services.Replace(typeof(System.Web.Http.Dispatcher.IHttpControllerActivator), new AopWebApiFactory());
 
+            if (type == WebType.MvcAndWebApi)
+            {
+                System.Web.Mvc.ControllerBuilder.Current.SetControllerFactory(new AopMvcFactory());
+                System.Web.Http.GlobalConfiguration.Configuration.Services.Replace(typeof(System.Web.Http.Dispatcher.IHttpControllerActivator), new AopWebApiFactory());
+            }
+
             InitAutowiredGeneric(nameSpaceModel,type);
         }
 
@@ -281,11 +305,20 @@ namespace FastAop
                 });
             });
 
+            if (type == WebType.Null)
+                return;
+
             if (type == WebType.Mvc)
                 System.Web.Mvc.ControllerBuilder.Current.SetControllerFactory(new AopMvcFactory());
 
             if (type == WebType.WebApi)
                 System.Web.Http.GlobalConfiguration.Configuration.Services.Replace(typeof(System.Web.Http.Dispatcher.IHttpControllerActivator), new AopWebApiFactory());
+
+            if (type == WebType.MvcAndWebApi)
+            {
+                System.Web.Mvc.ControllerBuilder.Current.SetControllerFactory(new AopMvcFactory());
+                System.Web.Http.GlobalConfiguration.Configuration.Services.Replace(typeof(System.Web.Http.Dispatcher.IHttpControllerActivator), new AopWebApiFactory());
+            }
 
             InitAutowiredGeneric(nameSpaceModel,type);
         }
