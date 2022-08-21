@@ -1,5 +1,6 @@
 ﻿using FastAop.Constructor;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Reflection;
@@ -10,7 +11,7 @@ namespace FastAop.Factory
 {
     public class AopWebApiFactory : IHttpControllerActivator
     {
-        private Dictionary<Type, object> cache = new Dictionary<Type, object>();
+        private ConcurrentDictionary<Type, object> cache = new ConcurrentDictionary<Type, object>();
         public IHttpController Create(HttpRequestMessage request, HttpControllerDescriptor controllerDescriptor, Type controllerType)
         {
             if (request == null)
@@ -44,7 +45,7 @@ namespace FastAop.Factory
                     item.SetValue(instance, FastAop._types.GetValue(item.FieldType));
                 }
 
-                cache.Add(controllerType, instance);
+                cache.TryAdd(controllerType, instance);
             }
 
             return (IHttpController)instance;
