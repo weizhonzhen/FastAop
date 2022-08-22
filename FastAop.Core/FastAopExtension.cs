@@ -41,40 +41,43 @@ namespace Microsoft.Extensions.DependencyInjection
                 if (assembly.IsDynamic)
                     return;
 
-                assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
+                try
                 {
-                    if (b.IsGenericType && b.GetGenericArguments().ToList().Select(a => a.FullName).ToList().Exists(n => n == null))
-                        return;
-
-                    if (b.IsAbstract && b.IsSealed)
-                        return;
-
-                    if (b.BaseType == typeof(FastAopAttribute))
-                        return;
-
-                    if (b.BaseType == typeof(Attribute))
-                        return;
-
-                    b.GetConstructors().ToList().ForEach(c =>
+                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
                     {
-                        Constructor.depth = 0;
-                        c.GetParameters().ToList().ForEach(p =>
+                        if (b.IsGenericType && b.GetGenericArguments().ToList().Select(a => a.FullName).ToList().Exists(n => n == null))
+                            return;
+
+                        if (b.IsAbstract && b.IsSealed)
+                            return;
+
+                        if (b.BaseType == typeof(FastAopAttribute))
+                            return;
+
+                        if (b.BaseType == typeof(Attribute))
+                            return;
+
+                        b.GetConstructors().ToList().ForEach(c =>
                         {
-                            Constructor.Param(serviceCollection, p.ParameterType, aopType);
+                            Constructor.depth = 0;
+                            c.GetParameters().ToList().ForEach(p =>
+                            {
+                                Constructor.Param(serviceCollection, p.ParameterType, aopType);
+                            });
                         });
-                    });
 
-                    if (!b.IsInterface && b.GetInterfaces().Any())
-                    {
-                        serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == b.GetInterfaces().First()));
-                        serviceCollection.AddScoped(b.GetInterfaces().First(), FastAop.Core.FastAop.Instance(b, b.GetInterfaces().First(), aopType).GetType());
-                    }
-                    else if (!b.IsInterface && !b.GetInterfaces().Any())
-                    {
-                        serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == b));
-                        serviceCollection.AddScoped(b, s => { return FastAopDyn.Instance(b, aopType); });
-                    }
-                });
+                        if (!b.IsInterface && b.GetInterfaces().Any())
+                        {
+                            serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == b.GetInterfaces().First()));
+                            serviceCollection.AddScoped(b.GetInterfaces().First(), FastAop.Core.FastAop.Instance(b, b.GetInterfaces().First(), aopType).GetType());
+                        }
+                        else if (!b.IsInterface && !b.GetInterfaces().Any())
+                        {
+                            serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == b));
+                            serviceCollection.AddScoped(b, s => { return FastAopDyn.Instance(b, aopType); });
+                        }
+                    });
+                } catch { }
             });
 
             serviceProvider = serviceCollection.BuildServiceProvider();
@@ -105,52 +108,55 @@ namespace Microsoft.Extensions.DependencyInjection
                 if (assembly.IsDynamic)
                     return;
 
-                assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
+                try
                 {
-                    if (!b.IsGenericType)
-                        return;
-
-                    if (b.IsAbstract && b.IsSealed)
-                        return;
-
-                    if (b.BaseType == typeof(FastAopAttribute))
-                        return;
-
-                    if (b.BaseType == typeof(Attribute))
-                        return;
-
-                    b.GetConstructors().ToList().ForEach(c =>
+                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
                     {
-                        Constructor.depth = 0;
-                        c.GetParameters().ToList().ForEach(p =>
-                        {
-                            Constructor.Param(serviceCollection, p.ParameterType, aopType);
-                        });
-                    });
+                        if (!b.IsGenericType)
+                            return;
 
+                        if (b.IsAbstract && b.IsSealed)
+                            return;
 
-                    if (b.IsGenericType)
-                    {
-                        list.ForEach(m =>
+                        if (b.BaseType == typeof(FastAopAttribute))
+                            return;
+
+                        if (b.BaseType == typeof(Attribute))
+                            return;
+
+                        b.GetConstructors().ToList().ForEach(c =>
                         {
-                            b.GetConstructors().ToList().ForEach(c =>
+                            Constructor.depth = 0;
+                            c.GetParameters().ToList().ForEach(p =>
                             {
-                                Constructor.depth = 0;
-                                c.GetParameters().ToList().ForEach(p =>
-                                {
-                                    Constructor.Param(serviceCollection, p.ParameterType, aopType);
-                                });
+                                Constructor.Param(serviceCollection, p.ParameterType, aopType);
                             });
-
-                            if (!b.IsInterface && b.GetInterfaces().Any())
-                            {
-                                var serviceType = b.MakeGenericType(new Type[1] { m });
-                                serviceCollection.Remove(serviceCollection.FirstOrDefault(a=>a.ServiceType== serviceType.GetInterfaces().First()));
-                                serviceCollection.AddScoped(serviceType.GetInterfaces().First(), FastAop.Core.FastAop.Instance(serviceType, serviceType.GetInterfaces().First(), aopType).GetType());
-                            }
                         });
-                    }
-                });
+
+
+                        if (b.IsGenericType)
+                        {
+                            list.ForEach(m =>
+                            {
+                                b.GetConstructors().ToList().ForEach(c =>
+                                {
+                                    Constructor.depth = 0;
+                                    c.GetParameters().ToList().ForEach(p =>
+                                    {
+                                        Constructor.Param(serviceCollection, p.ParameterType, aopType);
+                                    });
+                                });
+
+                                if (!b.IsInterface && b.GetInterfaces().Any())
+                                {
+                                    var serviceType = b.MakeGenericType(new Type[1] { m });
+                                    serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == serviceType.GetInterfaces().First()));
+                                    serviceCollection.AddScoped(serviceType.GetInterfaces().First(), FastAop.Core.FastAop.Instance(serviceType, serviceType.GetInterfaces().First(), aopType).GetType());
+                                }
+                            });
+                        }
+                    });
+                } catch { }
             });
 
             serviceProvider = serviceCollection.BuildServiceProvider();
@@ -181,33 +187,36 @@ namespace Microsoft.Extensions.DependencyInjection
                 if (assembly.IsDynamic)
                     return;
 
-                assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
+                try
                 {
-                    if (b.IsGenericType)
-                        return;
-
-                    if (b.IsAbstract && b.IsSealed)
-                        return;
-
-                    if (b.IsInterface)
-                        return;
-
-                   var obj = Instance(b, isFastAopCall);
-
-                    if (obj == null)
-                        return;
-
-                    if (b.GetInterfaces().Any())
+                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
                     {
-                        serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == b.GetInterfaces().First()));
-                        serviceCollection.AddScoped(b.GetInterfaces().First(), s => { return obj; });
-                    }
-                    else
-                    {
-                        serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == b));
-                        serviceCollection.AddScoped(b, s => { return obj; });
-                    }
-                });
+                        if (b.IsGenericType)
+                            return;
+
+                        if (b.IsAbstract && b.IsSealed)
+                            return;
+
+                        if (b.IsInterface)
+                            return;
+
+                        var obj = Instance(b, isFastAopCall);
+
+                        if (obj == null)
+                            return;
+
+                        if (b.GetInterfaces().Any())
+                        {
+                            serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == b.GetInterfaces().First()));
+                            serviceCollection.AddScoped(b.GetInterfaces().First(), s => { return obj; });
+                        }
+                        else
+                        {
+                            serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == b));
+                            serviceCollection.AddScoped(b, s => { return obj; });
+                        }
+                    });
+                } catch { }
             });
 
             serviceCollection.Remove(serviceCollection.FirstOrDefault(c => c.ServiceType == typeof(IControllerActivator)));
@@ -238,34 +247,37 @@ namespace Microsoft.Extensions.DependencyInjection
                 if (assembly.IsDynamic)
                     return;
 
-                assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
+                try
                 {
-                    if (!b.IsGenericType)
-                        return;
-
-                    if (b.IsAbstract && b.IsSealed)
-                        return;
-
-                    var obj = InstanceGeneric(serviceCollection, list, b, isFastAopCall);
-
-                    if (obj == null)
-                        return;
-
-                    list.ForEach(m =>
+                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
                     {
-                        var type = b.MakeGenericType(new Type[1] { m });
-                        if (b.GetInterfaces().Any())
+                        if (!b.IsGenericType)
+                            return;
+
+                        if (b.IsAbstract && b.IsSealed)
+                            return;
+
+                        var obj = InstanceGeneric(serviceCollection, list, b, isFastAopCall);
+
+                        if (obj == null)
+                            return;
+
+                        list.ForEach(m =>
                         {
-                            serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == type.GetInterfaces().First()));
-                            serviceCollection.AddScoped(type.GetInterfaces().First(), s => { return obj; });
-                        }
-                        else
-                        {
-                            serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == type));
-                            serviceCollection.AddScoped(type, s => { return obj; });
-                        }
+                            var type = b.MakeGenericType(new Type[1] { m });
+                            if (b.GetInterfaces().Any())
+                            {
+                                serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == type.GetInterfaces().First()));
+                                serviceCollection.AddScoped(type.GetInterfaces().First(), s => { return obj; });
+                            }
+                            else
+                            {
+                                serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == type));
+                                serviceCollection.AddScoped(type, s => { return obj; });
+                            }
+                        });
                     });
-                });
+                } catch { }
             });
 
             serviceCollection.Remove(serviceCollection.FirstOrDefault(c => c.ServiceType == typeof(IControllerActivator)));
@@ -430,11 +442,14 @@ namespace Microsoft.Extensions.DependencyInjection
                 if (assembly.IsDynamic)
                     return;
 
-                assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceModel)).ToList().ForEach(b =>
+                try
                 {
-                    if (b.IsPublic && b.IsClass && !b.IsAbstract && !b.IsGenericType)
-                        list.Add(b);
-                });
+                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceModel)).ToList().ForEach(b =>
+                    {
+                        if (b.IsPublic && b.IsClass && !b.IsAbstract && !b.IsGenericType)
+                            list.Add(b);
+                    });
+                } catch { }
             });
 
             return list;
