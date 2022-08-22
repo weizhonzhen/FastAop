@@ -5,6 +5,7 @@ using System.Reflection;
 using FastAop.Constructor;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.Linq;
 
 namespace FastAop.Factory
 {
@@ -35,10 +36,21 @@ namespace FastAop.Factory
                     if (item.FieldType.isSysType())
                         throw new Exception($"{item.Name} is system type not support");
 
-                    if (FastAop._types.GetValue(item.FieldType) == null)
+                    if (item.FieldType.IsInterface && FastAop._types.GetValue(item.FieldType) == null)
                         throw new Exception($"{item.FieldType.FullName} not in ServiceCollection");
 
-                    item.SetValue(instance, FastAop._types.GetValue(item.FieldType));
+                    if (!item.FieldType.IsInterface && item.FieldType.GetInterfaces().Any() && FastAop._types.GetValue(item.FieldType.GetInterfaces().First()) == null)
+                        throw new Exception($"{item.FieldType.GetInterfaces().First().FullName} not in ServiceCollection");
+
+                    if (!item.FieldType.IsInterface && Dic.GetValueDyn(item.FieldType) == null)
+                        throw new Exception($"{item.FieldType.FullName} not in ServiceCollection");
+
+                    if (item.FieldType.IsInterface)
+                        item.SetValue(instance, FastAop._types.GetValue(item.FieldType));
+                    else if(item.FieldType.GetInterfaces().Any())
+                        item.SetValue(instance, FastAop._types.GetValue(item.FieldType.GetInterfaces().First()));
+                    else
+                        item.SetValue(instance, Dic.GetValueDyn(item.FieldType));
                 }
 
                 cache.TryAdd(controllerType, instance);
