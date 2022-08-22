@@ -29,95 +29,81 @@ namespace FastAop.Core.Constructor
 
             if (paramType.IsInterface && serviceCollection.BuildServiceProvider().GetService(paramType) == null)
             {
-                paramType.Assembly.GetTypes().ToList().ForEach(t =>
-                {
-                    if (t.GetInterfaces().Any() && !t.IsAbstract && !t.IsSealed && t.GetInterfaces().ToList().Exists(e => e == paramType))
-                    {
-                        if (t.GetConstructors().Length > 0)
-                        {
-                            depth++;
-                            t.GetConstructors().ToList().ForEach(c =>
-                            {
-                                c.GetParameters().ToList().ForEach(p =>
-                                {
-                                    if (depth > 10)
-                                        throw new Exception($"Type Name:{t.FullName},Parameters Type:{string.Join(",", c.GetParameters().Select(g => g.Name))} repeat using");
+                var param = paramType.Assembly.GetTypes().ToList().Find(t => t.GetInterfaces().Any() && !t.IsAbstract && !t.IsSealed && t.GetInterfaces().ToList().Exists(e => e == paramType));
+                if (param == null)
+                    return;
 
-                                    Param(serviceCollection, p.ParameterType, aopType);
-                                });
-                            });
-                        }
-                        serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == paramType));
-                        serviceCollection.AddScoped(paramType, FastAop.Instance(t, paramType).GetType());
-                    }
-                });
+                if (param.GetConstructors().Length > 0)
+                {
+                    depth++;
+                    param.GetConstructors().ToList().ForEach(c =>
+                    {
+                        c.GetParameters().ToList().ForEach(p =>
+                        {
+                            if (depth > 10)
+                                throw new Exception($"Type Name:{param.FullName},Parameters Type:{string.Join(",", c.GetParameters().Select(g => g.Name))} repeat using");
+
+                            Param(serviceCollection, p.ParameterType, aopType);
+                        });
+                    });
+                }
+
+                serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == paramType));
+                serviceCollection.AddScoped(paramType, FastAop.Instance(param, paramType).GetType());
+                return;
             }
 
             return;
         }
 
-        internal static void Param(IServiceCollection serviceCollection, Type paramType, bool isServiceAttr)
+        internal static void Param(IServiceCollection serviceCollection, Type paramType)
         {
             if (paramType.isSysType())
                 return;
 
-            if (!paramType.IsInterface && paramType.GetInterfaces().Any() && isServiceAttr)
+            if (paramType.IsInterface && FastAopExtension.serviceProvider.GetService(paramType) != null)
+                return;
+
+            if (!paramType.IsInterface && paramType.GetInterfaces().Any())
             {
                 serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == paramType.GetInterfaces().First()));
                 serviceCollection.AddScoped(paramType.GetInterfaces().First(), FastAop.Instance(paramType, paramType.GetInterfaces().First()).GetType());
                 return;
             }
-            else if (!paramType.IsInterface && paramType.GetInterfaces().Any())
-            {
-                serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == paramType.GetInterfaces().First()));
-                serviceCollection.AddScoped(paramType.GetInterfaces().First(), paramType);
-                return;
-            }
-            else if (!paramType.IsInterface && !paramType.GetInterfaces().Any() && isServiceAttr)
+            else if (!paramType.IsInterface && !paramType.GetInterfaces().Any())
             {
                 serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == paramType));
                 serviceCollection.AddScoped(paramType, s => { return FastAopDyn.Instance(paramType); });
                 return;
             }
-            else if (!paramType.IsInterface && !paramType.GetInterfaces().Any() && paramType.GetConstructors().Length == 0)
-            {
-                serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == paramType));
-                serviceCollection.AddScoped(paramType, s => { return Activator.CreateInstance(paramType); });
-                return;
-            }
-            else if (!paramType.IsInterface && !paramType.GetInterfaces().Any() && paramType.GetConstructors().Length > 0)
-            {
-                var model = Get(paramType, null);
-                serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == paramType));
-                serviceCollection.AddScoped(paramType, s => { return Activator.CreateInstance(paramType, model.dynParam.ToArray()); });
-                return;
-            }
+
 
             if (paramType.IsInterface && serviceCollection.BuildServiceProvider().GetService(paramType) == null)
             {
-                paramType.Assembly.GetTypes().ToList().ForEach(t =>
+                var param = paramType.Assembly.GetTypes().ToList().Find(t => t.GetInterfaces().Any() && !t.IsAbstract && !t.IsSealed && t.GetInterfaces().ToList().Exists(e => e == paramType));
+                if (param == null)
+                    return;
+                if (param.GetConstructors().Length > 0)
                 {
-                    if (t.GetInterfaces().Any() && !t.IsAbstract && !t.IsSealed && t.GetInterfaces().ToList().Exists(e => e == paramType))
+                    depth++;
+                    param.GetConstructors().ToList().ForEach(c =>
                     {
-                        if (t.GetConstructors().Length > 0)
+                        c.GetParameters().ToList().ForEach(p =>
                         {
-                            depth++;
-                            t.GetConstructors().ToList().ForEach(c =>
-                            {
-                                c.GetParameters().ToList().ForEach(p =>
-                                {
-                                    if (depth > 10)
-                                        throw new Exception($"Type Name:{t.FullName},Parameters Type:{string.Join(",", c.GetParameters().Select(g => g.Name))} repeat using");
+                            if (depth > 10)
+                                throw new Exception($"Type Name:{param.FullName},Parameters Type:{string.Join(",", c.GetParameters().Select(g => g.Name))} repeat using");
 
-                                    Param(serviceCollection, p.ParameterType, isServiceAttr);
-                                });
-                            });
-                        }
-                        serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == paramType));
-                        serviceCollection.AddScoped(paramType,FastAop.Instance(t, paramType).GetType());
-                    }
-                });
+                            Param(serviceCollection, p.ParameterType);
+                            return;
+                        });
+                    });
+                }
+                serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == paramType));
+                serviceCollection.AddScoped(paramType, FastAop.Instance(param, paramType).GetType());
+                FastAopExtension.serviceProvider = serviceCollection.BuildServiceProvider();
+                return;
             }
+
             return;
         }
 
