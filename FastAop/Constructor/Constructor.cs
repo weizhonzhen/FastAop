@@ -10,7 +10,7 @@ namespace FastAop.Constructor
     {
         internal static int depth = 0;
 
-        internal static void Param(Type paramType, Type aopType)
+        internal static void Param(Type paramType, Type aopType=null)
         {
             if (paramType.isSysType())
                 return;
@@ -22,92 +22,35 @@ namespace FastAop.Constructor
             }
             else if (!paramType.IsInterface && !paramType.GetInterfaces().Any())
             {
-                Dic.SetValueDyn(paramType, FastAopDyn.Instance(paramType));
+                Dic.SetValueDyn(paramType, FastAopDyn.Instance(paramType,aopType));
                 return;
             }
 
             if (paramType.IsInterface && FastAop._types.GetValue(paramType) == null)
             {
-                paramType.Assembly.GetTypes().ToList().ForEach(t =>
+                var param = paramType.Assembly.GetTypes().ToList().Find(t => t.GetInterfaces().Any() && !t.IsAbstract && !t.IsSealed && t.GetInterfaces().ToList().Exists(e => e == paramType));
+                if (param == null)
+                    return;
+
+                if (param.GetInterfaces().Any() && !param.IsAbstract && !param.IsSealed && param.GetInterfaces().ToList().Exists(e => e == paramType))
                 {
-                    if (t.GetInterfaces().Any() && !t.IsAbstract && !t.IsSealed && t.GetInterfaces().ToList().Exists(e => e == paramType))
+                    depth++;
+                    if (param.GetConstructors().Length > 0)
                     {
-                        depth++;
-                        if (t.GetConstructors().Length > 0)
+                        param.GetConstructors().ToList().ForEach(c =>
                         {
-                            t.GetConstructors().ToList().ForEach(c =>
+                            c.GetParameters().ToList().ForEach(p =>
                             {
-                                c.GetParameters().ToList().ForEach(p =>
-                                {
-                                    if (depth > 10)
-                                        throw new Exception($"Type Name:{t.FullName},Parameters Type:{string.Join(",", c.GetParameters().Select(g => g.Name))} repeat using");
+                                if (depth > 10)
+                                    throw new Exception($"Type Name:{param.FullName},Parameters Type:{string.Join(",", c.GetParameters().Select(g => g.Name))} repeat using");
 
-                                    Param(p.ParameterType, aopType);
-                                });
+                                Param(p.ParameterType, aopType);
                             });
-                        }
-                        FastAop._types.SetValue(paramType, FastAop.Instance(t, paramType));
+                        });
                     }
-                });
-            }
-
-            return;
-        }
-
-        internal static void Param(Type paramType, bool isServiceAttr)
-        {
-            if (paramType.isSysType())
+                    FastAop._types.SetValue(paramType, FastAop.Instance(param, paramType,aopType));
+                }
                 return;
-
-            if (!paramType.IsInterface && paramType.GetInterfaces().Any() && isServiceAttr)
-            {
-                FastAop._types.SetValue(paramType.GetInterfaces().First(), FastAop.Instance(paramType, paramType.GetInterfaces().First()));
-                return;
-            }
-            else if (!paramType.IsInterface && paramType.GetInterfaces().Any())
-            {
-                FastAop._types.SetValue(paramType.GetInterfaces().First(), paramType);
-                return;
-            }
-            else if (!paramType.IsInterface && !paramType.GetInterfaces().Any() && isServiceAttr)
-            {
-                Dic.SetValueDyn(paramType, FastAopDyn.Instance(paramType));
-                return;
-            }
-            else if (!paramType.IsInterface && !paramType.GetInterfaces().Any() && paramType.GetConstructors().Length == 0)
-            {
-                FastAop._types.SetValue(paramType, Activator.CreateInstance(paramType));
-                return;
-            }
-            else if (!paramType.IsInterface && !paramType.GetInterfaces().Any() && paramType.GetConstructors().Length > 0)
-            {
-                var model = Get(paramType, null);
-                FastAop._types.SetValue(paramType, Activator.CreateInstance(paramType, model.dynParam.ToArray()));
-            }
-
-            if (paramType.IsInterface && FastAop._types.GetValue(paramType) == null)
-            {
-                paramType.Assembly.GetTypes().ToList().ForEach(t =>
-                {
-                    if (t.GetInterfaces().Any() && !t.IsAbstract && !t.IsSealed && t.GetInterfaces().ToList().Exists(e => e == paramType))
-                    {
-                        if (t.GetConstructors().Length > 0)
-                        {
-                            depth++;
-                            t.GetConstructors().ToList().ForEach(c =>
-                            {
-                                c.GetParameters().ToList().ForEach(p =>
-                                {
-                                    if (depth > 10)
-                                        throw new Exception($"Type Name:{t.FullName},Parameters Type:{string.Join(",", c.GetParameters().Select(g => g.Name))} repeat using");
-
-                                    Param(p.ParameterType, isServiceAttr);
-                                });
-                            });
-                        }
-                        FastAop._types.SetValue(paramType, FastAop.Instance(t, paramType));
-                    }
-                });
             }
             return;
         }
@@ -137,6 +80,8 @@ namespace FastAop.Constructor
                         model.dynParam.Add(Dic.GetValueDyn(p.ParameterType));
                     else if (!p.ParameterType.IsAbstract && !p.ParameterType.IsInterface)
                         model.dynParam.Add(Activator.CreateInstance(p.ParameterType));
+                    else if (FastAop._types.GetValue(p.ParameterType) == null && p.ParameterType.IsInterface && p.ParameterType.IsGenericType)
+                        throw new Exception($"FastAop.InitGeneric Method，{serviceType.FullName} Constructor have Parameter Generic Type");
                     else if (FastAop._types.GetValue(p.ParameterType) == null && p.ParameterType.IsInterface)
                         throw new Exception($"can't find {p.ParameterType.Name} Instance class");
                     else if (p.ParameterType.IsInterface)
