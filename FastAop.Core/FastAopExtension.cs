@@ -331,10 +331,7 @@ namespace Microsoft.Extensions.DependencyInjection
                         }
                     }
 
-                    //if (item.FieldType.IsInterface)
-                    //    item.SetValue(temp, serviceProvider.GetService(item.FieldType));
-                    //else
-                        item.SetValue(temp, serviceProvider.GetService(item.FieldType));
+                    item.SetValue(temp, serviceProvider.GetService(item.FieldType));
 
                     obj.GetType().GetRuntimeFields().First().SetValue(obj, temp);
                 }
