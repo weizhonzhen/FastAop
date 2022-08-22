@@ -24,98 +24,12 @@ namespace Microsoft.Extensions.DependencyInjection
 
         }
 
-        public static IServiceCollection AddFastAop(this IServiceCollection serviceCollection, string nameSpaceService)
+        public static IServiceCollection AddFastAop(this IServiceCollection serviceCollection, string nameSpaceService, Type aopType=null)
         {
             if (string.IsNullOrEmpty(nameSpaceService))
                 return serviceCollection;
 
-            InitAssembly();
-
-            serviceProvider = serviceCollection.BuildServiceProvider();
-
-            AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(assembly =>
-            {
-                if (assembly.IsDynamic)
-                    return;
-
-                assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
-                {
-                    var isServiceAttr = false;
-                    b.GetMethods().ToList().ForEach(m =>
-                    {
-                        if (m.GetCustomAttributes().ToList().Exists(a => a.GetType().BaseType == typeof(FastAopAttribute)))
-                            isServiceAttr = true;
-                    });
-
-                    if (b.IsGenericType && b.GetGenericArguments().ToList().Select(a => a.FullName).ToList().Exists(n => n == null))
-                        return;
-
-                    if (b.IsAbstract && b.IsSealed)
-                        return;
-
-                    if (b.BaseType == typeof(FastAopAttribute))
-                        return;
-
-                    if (b.BaseType == typeof(Attribute))
-                        return;
-
-                    b.GetConstructors().ToList().ForEach(c =>
-                    {
-                        Constructor.depth = 0;
-                        c.GetParameters().ToList().ForEach(p =>
-                        {
-                            Constructor.Param(serviceCollection, p.ParameterType);
-                        });
-                    });
-
-                    if (!b.IsInterface && b.GetInterfaces().Any() && isServiceAttr)
-                    {
-                        serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == b.GetInterfaces().First()));
-                        serviceCollection.AddScoped(b.GetInterfaces().First(), FastAop.Core.FastAop.Instance(b, b.GetInterfaces().First()).GetType());
-                    }
-                    else if (!b.IsInterface && b.GetInterfaces().Any())
-                    {
-                        serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == b.GetInterfaces().First()));
-                        serviceCollection.AddScoped(b.GetInterfaces().First(), FastAop.Core.FastAop.Instance(b, b.GetInterfaces().First()).GetType());
-                    }
-                    else if (!b.IsInterface && !b.GetInterfaces().Any() && isServiceAttr)
-                    {
-                        serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == b));
-                        serviceCollection.AddScoped(b, s => { return FastAopDyn.Instance(b); });
-                    }
-                    else if (!b.IsInterface && !b.GetInterfaces().Any() && b.GetConstructors().Length == 0)
-                    {
-                        serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == b));
-                        serviceCollection.AddScoped(b, s => { return Activator.CreateInstance(b); });
-                    }
-                    else if (!b.IsInterface && !b.GetInterfaces().Any() && b.GetConstructors().Length > 0)
-                    {
-                        var model = Constructor.Get(b, null);
-                        serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == b));
-                        serviceCollection.AddScoped(b, s => { return Activator.CreateInstance(b, model.dynParam.ToArray()); });
-                    }
-                });
-            });
-
-            serviceProvider = serviceCollection.BuildServiceProvider();
-
-            serviceCollection.Remove(serviceCollection.FirstOrDefault(c => c.ServiceType == typeof(IControllerActivator)));
-            serviceCollection.AddSingleton<IControllerActivator, AopControllerFactory>();
-
-            serviceCollection.Remove(serviceCollection.FirstOrDefault(c => c.ServiceType == typeof(IPageModelActivatorProvider)));
-            serviceCollection.AddSingleton<IPageModelActivatorProvider, AopPageFactory>();
-
-            serviceCollection.AddFastAopAutowired(nameSpaceService);
-
-            return serviceCollection;
-        }
-
-        public static IServiceCollection AddFastAop(this IServiceCollection serviceCollection, string nameSpaceService, Type aopType)
-        {
-            if (string.IsNullOrEmpty(nameSpaceService))
-                return serviceCollection;
-
-            if (aopType.BaseType != typeof(FastAopAttribute))
+            if (aopType != null && aopType.BaseType != typeof(FastAopAttribute))
                 throw new Exception($"aopType class not is FastAopAttribute,class name:{aopType.Name}");
 
             InitAssembly();
@@ -176,82 +90,7 @@ namespace Microsoft.Extensions.DependencyInjection
             return serviceCollection;
         }
 
-        public static IServiceCollection AddFastAopGeneric(this IServiceCollection serviceCollection, string nameSpaceService, string nameSpaceModel)
-        {
-            if (string.IsNullOrEmpty(nameSpaceService))
-                return serviceCollection;
-
-            InitAssembly();
-
-            serviceProvider = serviceCollection.BuildServiceProvider();
-            var list = InitModelType(nameSpaceModel);
-
-            AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(assembly =>
-            {
-                if (assembly.IsDynamic)
-                    return;
-
-                assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
-                {
-                    if (!b.IsGenericType)
-                        return;
-
-                    if (b.IsAbstract && b.IsSealed)
-                        return;
-
-                    if (b.BaseType == typeof(FastAopAttribute))
-                        return;
-
-                    if (b.BaseType == typeof(Attribute))
-                        return;
-
-                    b.GetConstructors().ToList().ForEach(c =>
-                    {
-                        Constructor.depth = 0;
-                        c.GetParameters().ToList().ForEach(p =>
-                        {
-                            Constructor.Param(serviceCollection, p.ParameterType);
-                        });
-                    });
-
-                    if (b.IsGenericType)
-                    {
-                        list.ForEach(m =>
-                        {
-                            b.GetConstructors().ToList().ForEach(c =>
-                            {
-                                Constructor.depth = 0;
-                                c.GetParameters().ToList().ForEach(p =>
-                                {
-                                    Constructor.Param(serviceCollection, p.ParameterType);
-                                });
-                            });
-
-                            if (!b.IsInterface && b.GetInterfaces().Any())
-                            {
-                                var serviceType = b.MakeGenericType(new Type[1] { m });
-                                serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == serviceType.GetInterfaces().First()));
-                                serviceCollection.AddScoped(serviceType.GetInterfaces().First(), FastAop.Core.FastAop.Instance(serviceType, serviceType.GetInterfaces().First()).GetType());
-                            }
-                        });
-                    }
-                });
-            });
-
-            serviceProvider = serviceCollection.BuildServiceProvider();
-
-            serviceCollection.Remove(serviceCollection.FirstOrDefault(c => c.ServiceType == typeof(IControllerActivator)));
-            serviceCollection.AddSingleton<IControllerActivator, AopControllerFactory>();
-
-            serviceCollection.Remove(serviceCollection.FirstOrDefault(c => c.ServiceType == typeof(IPageModelActivatorProvider)));
-            serviceCollection.AddSingleton<IPageModelActivatorProvider, AopPageFactory>();
-
-            serviceCollection.AddFastAopAutowiredGeneric(nameSpaceService,nameSpaceModel);
-
-            return serviceCollection;
-        }
-
-        public static IServiceCollection AddFastAopGeneric(this IServiceCollection serviceCollection, string nameSpaceService, string nameSpaceModel, Type aopType)
+        public static IServiceCollection AddFastAopGeneric(this IServiceCollection serviceCollection, string nameSpaceService, string nameSpaceModel, Type aopType=null)
         {
             if (string.IsNullOrEmpty(nameSpaceService))
                 return serviceCollection;
@@ -380,6 +219,64 @@ namespace Microsoft.Extensions.DependencyInjection
             serviceProvider = serviceCollection.BuildServiceProvider();
             return serviceCollection;
         }
+    
+        public static IServiceCollection AddFastAopAutowiredGeneric(this IServiceCollection serviceCollection, string nameSpaceService, string nameSpaceModel)
+        {
+            var isFastAopCall = true;
+            if (serviceProvider == null)
+            {
+                isFastAopCall = false;
+                serviceProvider = serviceCollection.BuildServiceProvider();
+                InitAssembly();
+            }
+
+            var list = InitModelType(nameSpaceModel);
+
+
+            AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(assembly =>
+            {
+                if (assembly.IsDynamic)
+                    return;
+
+                assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
+                {
+                    if (!b.IsGenericType)
+                        return;
+
+                    if (b.IsAbstract && b.IsSealed)
+                        return;
+
+                    var obj = InstanceGeneric(serviceCollection, list, b, isFastAopCall);
+
+                    if (obj == null)
+                        return;
+
+                    list.ForEach(m =>
+                    {
+                        var type = b.MakeGenericType(new Type[1] { m });
+                        if (b.GetInterfaces().Any())
+                        {
+                            serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == type.GetInterfaces().First()));
+                            serviceCollection.AddScoped(type.GetInterfaces().First(), s => { return obj; });
+                        }
+                        else
+                        {
+                            serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == type));
+                            serviceCollection.AddScoped(type, s => { return obj; });
+                        }
+                    });
+                });
+            });
+
+            serviceCollection.Remove(serviceCollection.FirstOrDefault(c => c.ServiceType == typeof(IControllerActivator)));
+            serviceCollection.AddSingleton<IControllerActivator, AopControllerFactory>();
+
+            serviceCollection.Remove(serviceCollection.FirstOrDefault(c => c.ServiceType == typeof(IPageModelActivatorProvider)));
+            serviceCollection.AddSingleton<IPageModelActivatorProvider, AopPageFactory>();
+
+            serviceProvider = serviceCollection.BuildServiceProvider();
+            return serviceCollection;
+        }
 
         private static object Instance(Type b, bool isFastAopCall)
         {
@@ -446,64 +343,6 @@ namespace Microsoft.Extensions.DependencyInjection
             return obj;
         }
 
-        public static IServiceCollection AddFastAopAutowiredGeneric(this IServiceCollection serviceCollection, string nameSpaceService, string nameSpaceModel)
-        {
-            var isFastAopCall = true;
-            if (serviceProvider == null)
-            {
-                isFastAopCall = false;
-                serviceProvider = serviceCollection.BuildServiceProvider();
-                InitAssembly();
-            }
-
-            var list = InitModelType(nameSpaceModel);
-
-
-            AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(assembly =>
-            {
-                if (assembly.IsDynamic)
-                    return;
-
-                assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
-                {                   
-                    if (!b.IsGenericType)
-                        return;
-
-                    if (b.IsAbstract && b.IsSealed)
-                        return;
-
-                    var obj = InstanceGeneric(serviceCollection, list, b, isFastAopCall);
-
-                    if (obj == null)
-                        return;
-
-                    list.ForEach(m =>
-                    {
-                        var type = b.MakeGenericType(new Type[1] { m });
-                        if (b.GetInterfaces().Any())
-                        {
-                            serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == type.GetInterfaces().First()));
-                            serviceCollection.AddScoped(type.GetInterfaces().First(), s => { return obj; });
-                        }
-                        else
-                        {
-                            serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == type));
-                            serviceCollection.AddScoped(type, s => { return obj; });
-                        }
-                    });
-                });
-            });
-
-            serviceCollection.Remove(serviceCollection.FirstOrDefault(c => c.ServiceType == typeof(IControllerActivator)));
-            serviceCollection.AddSingleton<IControllerActivator, AopControllerFactory>();
-
-            serviceCollection.Remove(serviceCollection.FirstOrDefault(c => c.ServiceType == typeof(IPageModelActivatorProvider)));
-            serviceCollection.AddSingleton<IPageModelActivatorProvider, AopPageFactory>();
-
-            serviceProvider = serviceCollection.BuildServiceProvider();
-            return serviceCollection;
-        }
-
         private static object InstanceGeneric(IServiceCollection serviceCollection,List<Type> list,Type b,bool isFastAopCall)
         {
             object obj=null, temp=null;
@@ -561,10 +400,10 @@ namespace Microsoft.Extensions.DependencyInjection
                                 if (item.FieldType.isSysType())
                                     throw new Exception($"{item.Name} is system type not support");
 
-                                if (param.FieldType.IsInterface)
-                                    InstanceGeneric(serviceCollection, list, serviceProvider.GetService(param.FieldType).GetType(), isFastAopCall);
-                                else if (param.FieldType.GetInterfaces().Any())
+                                if (param.FieldType.GetInterfaces().Any())
                                     InstanceGeneric(serviceCollection, list, serviceProvider.GetService(param.FieldType.GetInterfaces().First()).GetType(), isFastAopCall);
+                                else
+                                    InstanceGeneric(serviceCollection, list, serviceProvider.GetService(param.FieldType).GetType(), isFastAopCall);
                             }
                         }
 
