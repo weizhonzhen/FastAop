@@ -46,9 +46,9 @@ namespace FastAop.Factory
                         throw new Exception($"{item.FieldType.FullName} not in ServiceCollection");
 
                     if (item.FieldType.IsInterface)
-                        item.SetValue(instance, FastAop._types.GetValue(item.FieldType));
+                        item.SetValueDirect(__makeref(instance), FastAop._types.GetValue(item.FieldType));
                     else if(item.FieldType.GetInterfaces().Any())
-                        item.SetValue(instance, FastAop._types.GetValue(item.FieldType.GetInterfaces().First()));
+                        item.SetValueDirect(__makeref(instance), FastAop._types.GetValue(item.FieldType.GetInterfaces().First()));
                     else
                         item.SetValue(instance, Dic.GetValueDyn(item.FieldType));
                 }

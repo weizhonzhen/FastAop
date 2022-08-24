@@ -1,11 +1,12 @@
 ﻿using FastAop.Constructor;
+using FastAop.Result;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Threading.Tasks;
+using System.Reflection.Emit;
 using System.Web;
 using System.Web.UI;
 
@@ -59,9 +60,9 @@ namespace FastAop.Factory
                     throw new Exception($"{item.FieldType.FullName} not in ServiceCollection");
 
                 if (item.FieldType.IsInterface)
-                    item.SetValue(page, FastAop._types.GetValue(item.FieldType));
+                    item.SetValueDirect(__makeref(page), FastAop._types.GetValue(item.FieldType));
                 else if (item.FieldType.GetInterfaces().Any()) 
-                    item.SetValue(page, FastAop._types.GetValue(item.FieldType.GetInterfaces().First()));
+                    item.SetValueDirect(__makeref(page), FastAop._types.GetValue(item.FieldType.GetInterfaces().First()));
                 else
                     item.SetValue(page, Dic.GetValueDyn(item.FieldType));
             });
