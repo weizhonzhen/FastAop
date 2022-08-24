@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Linq;
 using System.Collections.Concurrent;
 using System.Reflection;
 
@@ -22,6 +23,7 @@ namespace FastAop.Core.Factory
 
             if (instance == null)
             {
+                object value;
                 var model = Constructor.Constructor.Get(type, null);
                 instance = Activator.CreateInstance(type, model.dynParam.ToArray());
 
@@ -33,10 +35,15 @@ namespace FastAop.Core.Factory
                     if (item.FieldType.isSysType())
                         throw new Exception($"{item.Name} is system type not support");
 
-                    if (FastAopExtension.serviceProvider.GetService(item.FieldType) == null)
+                    value = FastAopExtension.serviceProvider.GetService(item.FieldType);
+
+                    if (value == null)
                         throw new Exception($"{item.FieldType.FullName} not in ServiceCollection");
 
-                    item.SetValue(instance, FastAopExtension.serviceProvider.GetService(item.FieldType));
+                    if (!item.FieldType.IsInterface && !item.FieldType.GetInterfaces().Any())
+                        item.SetValue(instance, value);
+                    else
+                        item.SetValueDirect(__makeref(instance), value);
                 }
 
                 cache.TryAdd(type, instance);
