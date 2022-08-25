@@ -24,6 +24,9 @@ public class TestAop : ITestAop
     [Autowired]
     iTestServer server; //AddFastAopAutowired or AddFastAopAutowiredGeneric
     
+    [Autowired]
+    iTestServer<Test> serverTezt;
+    
     int _a;
     public TestAop(int a)
     {
