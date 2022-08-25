@@ -122,7 +122,10 @@ namespace FastAop
                             return;
 
                         if (!b.IsGenericType)
-                            return;
+                        {
+                            Init(b.Namespace,type,aopType);
+                            return; 
+                        }
 
                         if (b.BaseType == typeof(FastAopAttribute))
                             return;
