@@ -167,7 +167,7 @@ namespace Microsoft.Extensions.DependencyInjection
             serviceCollection.Remove(serviceCollection.FirstOrDefault(c => c.ServiceType == typeof(IPageModelActivatorProvider)));
             serviceCollection.AddSingleton<IPageModelActivatorProvider, AopPageFactory>();
 
-            serviceCollection.AddFastAopAutowiredGeneric(nameSpaceService,nameSpaceModel);
+            serviceCollection.AddFastAopAutowiredGeneric(nameSpaceService,nameSpaceModel,aopType);
 
             return serviceCollection;
         }
@@ -229,7 +229,7 @@ namespace Microsoft.Extensions.DependencyInjection
             return serviceCollection;
         }
     
-        public static IServiceCollection AddFastAopAutowiredGeneric(this IServiceCollection serviceCollection, string nameSpaceService, string nameSpaceModel)
+        public static IServiceCollection AddFastAopAutowiredGeneric(this IServiceCollection serviceCollection, string nameSpaceService, string nameSpaceModel, Type aopType = null)
         {
             var isFastAopCall = true;
             if (serviceProvider == null)
@@ -251,11 +251,15 @@ namespace Microsoft.Extensions.DependencyInjection
                 {
                     assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
                     {
-                        if (!b.IsGenericType)
-                            return;
-
+                        
                         if (b.IsAbstract && b.IsSealed)
                             return;
+
+                        if (!b.IsGenericType)
+                        {
+                            AddFastAop(serviceCollection, b.Namespace,aopType);
+                            return;
+                        }
 
                         var obj = InstanceGeneric(serviceCollection, list, b, isFastAopCall);
 
