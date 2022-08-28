@@ -302,8 +302,11 @@ namespace Microsoft.Extensions.DependencyInjection
                 if (item.GetCustomAttribute<Autowired>() == null)
                     continue;
 
+                if (!item.Attributes.HasFlag(FieldAttributes.InitOnly))
+                    throw new Exception($"{b.Name} field {item} attribute must readonly");
+
                 if (item.FieldType.isSysType())
-                    throw new Exception($"{item.Name} is system type not support");
+                    throw new Exception($"{b.Name} field {item} is system type not support");
 
                 if (serviceProvider.GetService(item.FieldType) == null && isFastAopCall && item.FieldType.IsGenericType)
                     throw new Exception($"AddFastAopGeneric Method first，{item.FieldType.FullName} is Generic Type");
@@ -337,8 +340,11 @@ namespace Microsoft.Extensions.DependencyInjection
                             if (item.GetCustomAttribute<Autowired>() == null)
                                 continue;
 
+                            if (!item.Attributes.HasFlag(FieldAttributes.InitOnly))
+                                throw new Exception($"{type.Name} field {item} attribute must readonly");
+
                             if (item.FieldType.isSysType())
-                                throw new Exception($"{item.Name} is system type not support");
+                                throw new Exception($"{type.Name} field {item} is system type not support");
 
                             if (param.FieldType.IsInterface)
                                 Instance(serviceProvider.GetService(param.FieldType).GetType(), isFastAopCall);
@@ -363,6 +369,9 @@ namespace Microsoft.Extensions.DependencyInjection
             {
                 if (item.GetCustomAttribute<Autowired>() == null)
                     continue;
+
+                if (!item.Attributes.HasFlag(FieldAttributes.InitOnly))
+                    throw new Exception($"{b.Name} field {item} attribute must readonly");
 
                 if (item.FieldType.isSysType())
                     throw new Exception($"{item.Name} is system type not support");
@@ -410,8 +419,11 @@ namespace Microsoft.Extensions.DependencyInjection
                                 if (item.GetCustomAttribute<Autowired>() == null)
                                     continue;
 
+                                if (!item.Attributes.HasFlag(FieldAttributes.InitOnly))
+                                    throw new Exception($"{type.Name} field {item} attribute must readonly");
+
                                 if (item.FieldType.isSysType())
-                                    throw new Exception($"{item.Name} is system type not support");
+                                    throw new Exception($"{type.Name} field {item} is system type not support");
 
                                 if (param.FieldType.GetInterfaces().Any())
                                     InstanceGeneric(serviceCollection, list, serviceProvider.GetService(param.FieldType.GetInterfaces().First()).GetType(), isFastAopCall);
