@@ -42,22 +42,25 @@ namespace FastAop.Factory
                 cache.TryAdd(type, list);
             }
 
-            list.ForEach(item =>
+            foreach(var item in  list)
             {
                 if (item.GetCustomAttribute<Autowired>() == null)
-                    return;
+                    continue;
+
+                if (!item.Attributes.HasFlag(FieldAttributes.InitOnly))
+                    throw new Exception($"{page.GetType().Name} field {item} attribute must readonly");
 
                 if (item.FieldType.isSysType())
-                    throw new Exception($"{page.GetType().Name} field {item.Name} is system type not support");
+                    throw new Exception($"{page.GetType().Name} field {item} is system type not support");
 
                 if (item.FieldType.IsInterface && FastAop._types.GetValue(item.FieldType) == null)
-                    throw new Exception($"{item.FieldType.Name} not in ServiceCollection");
+                    throw new Exception($"{page.GetType().Name} field {item} not in ServiceCollection");
 
                 if (!item.FieldType.IsInterface && item.FieldType.GetInterfaces().Any() && FastAop._types.GetValue(item.FieldType.GetInterfaces().First()) == null)
-                    throw new Exception($"{item.FieldType.GetInterfaces().First().FullName} not in ServiceCollection");
+                    throw new Exception($"{page.GetType().Name} field {item} not in ServiceCollection");
 
                 if (!item.FieldType.IsInterface && Dic.GetValueDyn(item.FieldType) == null)
-                    throw new Exception($"{item.FieldType.FullName} not in ServiceCollection");
+                    throw new Exception($"{page.GetType().Name} field {item} not in ServiceCollection");
 
                 if (item.FieldType.IsInterface)
                     item.SetValueDirect(__makeref(page), FastAop._types.GetValue(item.FieldType));
@@ -65,7 +68,7 @@ namespace FastAop.Factory
                     item.SetValueDirect(__makeref(page), FastAop._types.GetValue(item.FieldType.GetInterfaces().First()));
                 else
                     item.SetValue(page, Dic.GetValueDyn(item.FieldType));
-            });
+            }
         }
     }
 }
