@@ -32,13 +32,16 @@ namespace FastAop.Core.Factory
                     if (item.GetCustomAttribute<Autowired>() == null)
                         continue;
 
+                    if (!item.Attributes.HasFlag(FieldAttributes.InitOnly))
+                        throw new Exception($"{type.Name} field {item} attribute must readonly");
+
                     if (item.FieldType.isSysType())
-                        throw new Exception($"{item.Name} is system type not support");
+                        throw new Exception($"{type.Name} field {item} is system type not support");
 
                     value = FastAopExtension.serviceProvider.GetService(item.FieldType);
 
                     if (value == null)
-                        throw new Exception($"{item.FieldType.FullName} not in ServiceCollection");
+                        throw new Exception($"{type.Name} field {item} not in ServiceCollection");
 
                     if (!item.FieldType.IsInterface && !item.FieldType.GetInterfaces().Any())
                         item.SetValue(instance, value);
