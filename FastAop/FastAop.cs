@@ -8,6 +8,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Web.UI;
 using ExceptionContext = FastAop.Context.ExceptionContext;
 
 namespace FastAop
@@ -178,34 +179,35 @@ namespace FastAop
         private static void InitAutowired(string nameSpaceService)
         {
             AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(assembly =>
-            {
-                if (assembly.IsDynamic)
-                    return;
-                try
-                {
-                    assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
-                    {
-                        if (b.IsGenericType)
-                            return;
+           {
+               if (assembly.IsDynamic)
+                   return;
+               try
+               {
+                   assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
+                   {
+                       if (b.IsGenericType)
+                           return;
 
-                        if (b.IsAbstract && b.IsSealed)
-                            return;
+                       if (b.IsAbstract && b.IsSealed)
+                           return;
 
-                        if (b.IsInterface)
-                            return;
+                       if (b.IsInterface)
+                           return;
 
-                        var obj = Instance(b);
+                       var obj = Instance(b);
 
-                        if (obj == null)
-                            return;
+                       if (obj == null)
+                           return;
 
-                        if (b.GetInterfaces().Any())
-                            _types.SetValue(b.GetInterfaces().First(), obj);
-                        else
-                            Dic.SetValueDyn(b, obj);
-                    });
-                } catch { }
-            });
+                       if (b.GetInterfaces().Any())
+                           _types.SetValue(b.GetInterfaces().First(), obj);
+                       else
+                           Dic.SetValueDyn(b, obj);
+                   });
+               }
+               catch { }
+           });
         }
 
         private static object Instance(Type b)
@@ -216,20 +218,23 @@ namespace FastAop
                 if (item.GetCustomAttribute<Autowired>() == null)
                     continue;
 
+                if (!item.Attributes.HasFlag(FieldAttributes.InitOnly))
+                    throw new Exception($"{b.Name} field {item} attribute must readonly");
+
                 if (item.FieldType.isSysType())
-                    throw new Exception($"{item.Name} is system type not support");
+                    throw new Exception($"{b.Name} field {item} is system type not support");
 
                 if (item.FieldType.IsInterface && _types.GetValue(item.FieldType) == null && item.FieldType.IsGenericType)
-                    throw new Exception($"AddFastAopGeneric Method first，{item.FieldType.FullName} is Generic Type");
+                    throw new Exception($"FastAop.InitGeneric Method first，{b.Name} field {item}  is Generic Type");
 
                 if (item.FieldType.IsInterface && _types.GetValue(item.FieldType) == null)
-                    throw new Exception($"AddFastAop Method，{item.FieldType.FullName} not in ServiceCollection");
+                    throw new Exception($"FastAop.Init Method，{b.Name} field {item}  not in ServiceCollection");
 
                 if (!item.FieldType.IsInterface && item.FieldType.GetInterfaces().Any() && _types.GetValue(item.FieldType.GetInterfaces().First()) == null)
-                    throw new Exception($"AddFastAop Method，{item.FieldType.FullName} not in ServiceCollection");
+                    throw new Exception($"FastAop.Init Method，{b.Name} field {item}  not in ServiceCollection");
 
                 if (!item.FieldType.IsInterface && !item.FieldType.GetInterfaces().Any() && Dic.GetValueDyn(item.FieldType) == null)
-                    throw new Exception($"AddFastAop Method，{item.FieldType.FullName} not in ServiceCollection");
+                    throw new Exception($"FastAop.Init Method，{b.Name} field {item}  not in ServiceCollection");
 
                 if (b.IsInterface)
                     obj = _types.GetValue(b);
@@ -254,8 +259,11 @@ namespace FastAop
                             if (item.GetCustomAttribute<Autowired>() == null)
                                 continue;
 
+                            if (!item.Attributes.HasFlag(FieldAttributes.InitOnly))
+                                throw new Exception($"{b.Name} field {item} attribute must readonly");
+
                             if (item.FieldType.isSysType())
-                                throw new Exception($"{item.Name} is system type not support");
+                                throw new Exception($"{b.Name} field {item} is system type not support");
 
                             if (param.FieldType.IsInterface)
                                 Instance(_types.GetValue(param.FieldType).GetType());
@@ -267,13 +275,13 @@ namespace FastAop
                     }
 
                     if (item.FieldType.IsInterface)
-                        item.SetValue(temp, _types.GetValue(item.FieldType));
+                        item.SetValueDirect(__makeref(temp), _types.GetValue(item.FieldType));
                     else if (item.FieldType.GetInterfaces().Any())
-                        item.SetValue(temp, _types.GetValue(item.FieldType.GetInterfaces().First()));
+                        item.SetValueDirect(__makeref(temp), _types.GetValue(item.FieldType.GetInterfaces().First()));
                     else
                         item.SetValue(temp, Dic.GetValueDyn(item.FieldType));
 
-                    obj.GetType().GetRuntimeFields().First().SetValue(obj, temp);
+                    obj.GetType().GetRuntimeFields().First().SetValueDirect(__makeref(obj), temp);
                 }
             }
 
@@ -303,17 +311,20 @@ namespace FastAop
                             if (!b.IsGenericType)
                                 continue;
 
+                            if (!item.Attributes.HasFlag(FieldAttributes.InitOnly))
+                                throw new Exception($"{b.Name} field {item} attribute must readonly");
+
                             if (item.FieldType.isSysType())
-                                throw new Exception($"{item.Name} is system type not support");
+                                throw new Exception($"{b.Name} field {item} is system type not support");
 
                             if (_types.GetValue(item.FieldType) == null)
                                 FastAop.Init(b.Namespace, webType);
 
                             if (_types.GetValue(item.FieldType) == null && item.FieldType.IsGenericType)
-                                throw new Exception($"FastAop.InitGeneric Method，{b.FullName} Field {item.FieldType.FullName} is Generic Type");
+                                throw new Exception($"FastAop.InitGeneric Method，{b.Name} field {item} is Generic Type");
 
                             if (_types.GetValue(item.FieldType) == null)
-                                throw new Exception($"FastAop.Init Method，{b.FullName} Field {item.FieldType.FullName} not in ServiceCollection");
+                                throw new Exception($"FastAop.Init Method，{b.Name} field {item} not in ServiceCollection");
 
                             if (!b.IsInterface && !b.GetInterfaces().Any())
                                 continue;
@@ -341,16 +352,16 @@ namespace FastAop
                                     var newItem = temp.GetType().GetRuntimeFields().ToList().Find(a => a.FieldType == item.FieldType && a.Name == item.Name);
 
                                     if (item.FieldType.IsInterface)
-                                        newItem.SetValue(temp, _types.GetValue(item.FieldType));
+                                        newItem.SetValueDirect(__makeref(temp), _types.GetValue(item.FieldType));
                                     else
                                         newItem.SetValue(temp, Dic.GetValueDyn(item.FieldType));
 
-                                    obj.GetType().GetRuntimeFields().First().SetValue(obj, temp);
+                                    obj.GetType().GetRuntimeFields().First().SetValueDirect(__makeref(obj), temp);
                                 }
                                 else
                                 {
                                     var newItem = obj.GetType().GetRuntimeFields().ToList().Find(a => a.FieldType == item.FieldType && a.Name == item.Name);
-                                    newItem.SetValue(obj, _types.GetValue(item.FieldType));
+                                    newItem.SetValueDirect(__makeref(obj), _types.GetValue(item.FieldType));
                                 }
                             });
                         }
@@ -367,7 +378,8 @@ namespace FastAop
                                 Dic.SetValueDyn(type, obj);
                         });
                     });
-                } catch { }
+                }
+                catch { }
             });
         }
 
@@ -379,17 +391,20 @@ namespace FastAop
                 if (item.GetCustomAttribute<Autowired>() == null)
                     continue;
 
+                if (!item.Attributes.HasFlag(FieldAttributes.InitOnly))
+                    throw new Exception($"{b.Name} field {item} attribute must readonly");
+
                 if (item.FieldType.isSysType())
-                    throw new Exception($"{item.Name} is system type not support");
+                    throw new Exception($"{b.Name} field {item} is system type not support");
 
                 if (_types.GetValue(item.FieldType) == null)
                     Init(b.Namespace,webType);
 
                 if (Dic.GetValueDyn(item.FieldType) == null && item.FieldType.IsGenericType)
-                    throw new Exception($"FastAop.InitGeneric Method，{b.FullName} Field {item.FieldType.FullName} is Generic Type");
+                    throw new Exception($"FastAop.InitGeneric Method，{b.Name} field {item} is Generic Type");
 
                 if (_types.GetValue(item.FieldType) == null)
-                    throw new Exception($"FastAop.Init Method，{b.FullName} Field {item.FieldType.FullName} not in ServiceCollection");
+                    throw new Exception($"FastAop.Init Method，{b.Name} field {item} not in ServiceCollection");
 
                 if (!b.IsInterface && !b.GetInterfaces().Any())
                     continue;
@@ -422,8 +437,11 @@ namespace FastAop
                                 if (item.GetCustomAttribute<Autowired>() == null)
                                     continue;
 
+                                if (!item.Attributes.HasFlag(FieldAttributes.InitOnly))
+                                    throw new Exception($"{type.Name} field {item} attribute must readonly");
+
                                 if (item.FieldType.isSysType())
-                                    throw new Exception($"{item.Name} is system type not support");
+                                    throw new Exception($"{type.Name} field {item} is system type not support");
 
                                 if (param.FieldType.IsInterface)
                                     InstanceGeneric(list, _types.GetValue(param.FieldType).GetType(), webType);
@@ -434,22 +452,22 @@ namespace FastAop
 
                         var newItem = temp.GetType().GetRuntimeFields().ToList().Find(a => a.FieldType == item.FieldType && a.Name == item.Name);
                         if (item.FieldType.IsInterface)
-                            newItem.SetValue(temp, _types.GetValue(item.FieldType));
+                            newItem.SetValueDirect(__makeref(temp), _types.GetValue(item.FieldType));
                         else if (item.FieldType.GetInterfaces().Any())
-                            newItem.SetValue(temp, _types.GetValue(item.FieldType.GetInterfaces().First()));
+                            newItem.SetValueDirect(__makeref(temp), _types.GetValue(item.FieldType.GetInterfaces().First()));
                         else
                             newItem.SetValue(temp, Dic.GetValueDyn(item.FieldType));
 
-                        obj.GetType().GetRuntimeFields().First().SetValue(obj, temp);
+                        obj.GetType().GetRuntimeFields().First().SetValueDirect(__makeref(obj), temp);
                     }
                     else
                     {
                         var newItem = obj.GetType().GetRuntimeFields().ToList().Find(a => a.FieldType == item.FieldType && a.Name == item.Name);
 
                         if (item.FieldType.IsInterface)
-                            newItem.SetValue(temp, _types.GetValue(item.FieldType));
+                            newItem.SetValueDirect(__makeref(temp), _types.GetValue(item.FieldType));
                         else if (item.FieldType.GetInterfaces().Any())
-                            newItem.SetValue(temp, _types.GetValue(item.FieldType.GetInterfaces().First()));
+                            newItem.SetValueDirect(__makeref(temp), _types.GetValue(item.FieldType.GetInterfaces().First()));
                         else
                             newItem.SetValue(temp, Dic.GetValueDyn(item.FieldType));
                     }
