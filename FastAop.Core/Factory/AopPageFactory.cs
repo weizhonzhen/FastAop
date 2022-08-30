@@ -33,7 +33,7 @@ namespace FastAop.Core.Factory
                         continue;
 
                     if (!item.Attributes.HasFlag(FieldAttributes.InitOnly))
-                        throw new Exception($"{type.Name} field {item} attribute must readonly");
+                        throw new AopException($"{type.Name} field {item} attribute must readonly");
 
                     if (item.FieldType.isSysType())
                         throw new Exception($"{type.Name} field {item} is system type not support");
