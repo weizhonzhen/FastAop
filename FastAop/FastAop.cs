@@ -74,7 +74,12 @@ namespace FastAop
                         else if (!b.IsInterface && !b.GetInterfaces().Any())
                             Dic.SetValueDyn(b, FastAopDyn.Instance(b, aopType));
                     });
-                } catch { }
+                } 
+                catch(Exception ex)
+                {
+                    if (ex is AopException)
+                        throw ex;
+                }
             });
 
             InitAutowired(nameSpaceService);
@@ -155,7 +160,12 @@ namespace FastAop
                             });
                         }
                     });
-                } catch { }
+                }
+                catch (Exception ex)
+                {
+                    if (ex is AopException)
+                        throw ex;
+                }
             });
 
             InitAutowiredGeneric(nameSpaceModel, type);
@@ -206,7 +216,11 @@ namespace FastAop
                            Dic.SetValueDyn(b, obj);
                    });
                }
-               catch { }
+               catch (Exception ex)
+               {
+                   if (ex is AopException)
+                       throw ex;
+               }
            });
         }
 
@@ -219,7 +233,7 @@ namespace FastAop
                     continue;
 
                 if (!item.Attributes.HasFlag(FieldAttributes.InitOnly))
-                    throw new Exception($"{b.Name} field {item} attribute must readonly");
+                    throw new AopException($"{b.Name} field {item} attribute must readonly");
 
                 if (item.FieldType.isSysType())
                     throw new Exception($"{b.Name} field {item} is system type not support");
@@ -260,7 +274,7 @@ namespace FastAop
                                 continue;
 
                             if (!item.Attributes.HasFlag(FieldAttributes.InitOnly))
-                                throw new Exception($"{b.Name} field {item} attribute must readonly");
+                                throw new AopException($"{b.Name} field {item} attribute must readonly");
 
                             if (item.FieldType.isSysType())
                                 throw new Exception($"{b.Name} field {item} is system type not support");
@@ -312,7 +326,7 @@ namespace FastAop
                                 continue;
 
                             if (!item.Attributes.HasFlag(FieldAttributes.InitOnly))
-                                throw new Exception($"{b.Name} field {item} attribute must readonly");
+                                throw new AopException($"{b.Name} field {item} attribute must readonly");
 
                             if (item.FieldType.isSysType())
                                 throw new Exception($"{b.Name} field {item} is system type not support");
@@ -379,7 +393,11 @@ namespace FastAop
                         });
                     });
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    if (ex is AopException)
+                        throw ex;
+                }
             });
         }
 
@@ -392,7 +410,7 @@ namespace FastAop
                     continue;
 
                 if (!item.Attributes.HasFlag(FieldAttributes.InitOnly))
-                    throw new Exception($"{b.Name} field {item} attribute must readonly");
+                    throw new AopException($"{b.Name} field {item} attribute must readonly");
 
                 if (item.FieldType.isSysType())
                     throw new Exception($"{b.Name} field {item} is system type not support");
@@ -438,7 +456,7 @@ namespace FastAop
                                     continue;
 
                                 if (!item.Attributes.HasFlag(FieldAttributes.InitOnly))
-                                    throw new Exception($"{type.Name} field {item} attribute must readonly");
+                                    throw new AopException($"{type.Name} field {item} attribute must readonly");
 
                                 if (item.FieldType.isSysType())
                                     throw new Exception($"{type.Name} field {item} is system type not support");
