@@ -3,6 +3,7 @@ using FastAop.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 
 namespace FastAop.Constructor
 {
@@ -66,10 +67,15 @@ namespace FastAop.Constructor
         internal static ConstructorModel Get(Type serviceType, Type interfaceType)
         {
             var model = new ConstructorModel();
+            var list = serviceType.GetRuntimeFields().ToList();
             serviceType.GetConstructors().ToList().ForEach(a =>
             {
                 a.GetParameters().ToList().ForEach(p =>
                 {
+                    var paramType = list.FindAll(l => l.FieldType == p.ParameterType && l.GetCustomAttribute<Autowired>() == null);
+                    if (paramType.Count == 1 && paramType[0] != null && !paramType[0].Attributes.HasFlag(FieldAttributes.InitOnly))
+                        throw new AopException($"{serviceType.FullName} Field {paramType[0]} must attribute readonly");
+
                     model.constructorType.Add(p.ParameterType);
                     model.dynType.Add(p.ParameterType);
                     if (p.ParameterType.isSysType() && !p.ParameterType.IsValueType)
