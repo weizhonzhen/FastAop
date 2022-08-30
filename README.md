@@ -30,12 +30,12 @@ dynamic model = FastAopDyn.Instance(typeof(Test_Aop));
 public class TestAop : ITestAop
 {
     [Autowired]
-    private readonly iTestServer server;
+    private readonly iTestServer server; //must readonly property
     
     [Autowired]
-    private readonly iTestServer<Test> serverTezt;
+    private readonly iTestServer<Test> serverTezt; //must readonly property
     
-    private readonly int _a;
+    private readonly int _a; 
     public TestAop(int a)
     {
        _a=a;
