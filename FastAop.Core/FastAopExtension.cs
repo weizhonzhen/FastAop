@@ -77,7 +77,12 @@ namespace Microsoft.Extensions.DependencyInjection
                             serviceCollection.AddScoped(b, s => { return FastAopDyn.Instance(b, aopType); });
                         }
                     });
-                } catch { }
+                } 
+                catch (Exception ex)
+                {
+                    if (ex is AopException)
+                        throw ex;
+                }
             });
 
             serviceProvider = serviceCollection.BuildServiceProvider();
@@ -156,7 +161,11 @@ namespace Microsoft.Extensions.DependencyInjection
                             });
                         }
                     });
-                } catch { }
+                } catch(Exception ex) 
+                {
+                    if (ex is AopException)
+                        throw ex;
+                }
             });
 
             serviceProvider = serviceCollection.BuildServiceProvider();
@@ -216,7 +225,11 @@ namespace Microsoft.Extensions.DependencyInjection
                             serviceCollection.AddScoped(b, s => { return obj; });
                         }
                     });
-                } catch { }
+                } catch (Exception ex)
+                {
+                    if (ex is AopException)
+                        throw ex;
+                }
             });
 
             serviceCollection.Remove(serviceCollection.FirstOrDefault(c => c.ServiceType == typeof(IControllerActivator)));
@@ -281,7 +294,11 @@ namespace Microsoft.Extensions.DependencyInjection
                             }
                         });
                     });
-                } catch { }
+                } catch (Exception ex)
+                {
+                    if (ex is AopException)
+                        throw ex;
+                }
             });
 
             serviceCollection.Remove(serviceCollection.FirstOrDefault(c => c.ServiceType == typeof(IControllerActivator)));
@@ -303,7 +320,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     continue;
 
                 if (!item.Attributes.HasFlag(FieldAttributes.InitOnly))
-                    throw new Exception($"{b.Name} field {item} attribute must readonly");
+                    throw new AopException($"{b.Name} field {item} attribute must readonly");
 
                 if (item.FieldType.isSysType())
                     throw new Exception($"{b.Name} field {item} is system type not support");
@@ -341,7 +358,7 @@ namespace Microsoft.Extensions.DependencyInjection
                                 continue;
 
                             if (!item.Attributes.HasFlag(FieldAttributes.InitOnly))
-                                throw new Exception($"{type.Name} field {item} attribute must readonly");
+                                throw new AopException($"{type.Name} field {item} attribute must readonly");
 
                             if (item.FieldType.isSysType())
                                 throw new Exception($"{type.Name} field {item} is system type not support");
@@ -371,7 +388,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     continue;
 
                 if (!item.Attributes.HasFlag(FieldAttributes.InitOnly))
-                    throw new Exception($"{b.Name} field {item} attribute must readonly");
+                    throw new AopException($"{b.Name} field {item} attribute must readonly");
 
                 if (item.FieldType.isSysType())
                     throw new Exception($"{item.Name} is system type not support");
@@ -420,7 +437,7 @@ namespace Microsoft.Extensions.DependencyInjection
                                     continue;
 
                                 if (!item.Attributes.HasFlag(FieldAttributes.InitOnly))
-                                    throw new Exception($"{type.Name} field {item} attribute must readonly");
+                                    throw new AopException($"{type.Name} field {item} attribute must readonly");
 
                                 if (item.FieldType.isSysType())
                                     throw new Exception($"{type.Name} field {item} is system type not support");
