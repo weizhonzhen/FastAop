@@ -270,10 +270,10 @@ namespace FastAop
 
                         foreach (var param in temp.GetType().GetRuntimeFields())
                         {
-                            if (item.GetCustomAttribute<Autowired>() == null)
+                            if (param.GetCustomAttribute<Autowired>() == null)
                                 continue;
 
-                            if (!item.Attributes.HasFlag(FieldAttributes.InitOnly))
+                            if (!param.Attributes.HasFlag(FieldAttributes.InitOnly))
                                 throw new AopException($"{b.Name} field {item} attribute must readonly");
 
                             if (item.FieldType.isSysType())
@@ -452,13 +452,13 @@ namespace FastAop
 
                             foreach (var param in temp.GetType().GetRuntimeFields())
                             {
-                                if (item.GetCustomAttribute<Autowired>() == null)
+                                if (param.GetCustomAttribute<Autowired>() == null)
                                     continue;
 
-                                if (!item.Attributes.HasFlag(FieldAttributes.InitOnly))
+                                if (!param.Attributes.HasFlag(FieldAttributes.InitOnly))
                                     throw new AopException($"{type.Name} field {item} attribute must readonly");
 
-                                if (item.FieldType.isSysType())
+                                if (param.FieldType.isSysType())
                                     throw new Exception($"{type.Name} field {item} is system type not support");
 
                                 if (param.FieldType.IsInterface)
