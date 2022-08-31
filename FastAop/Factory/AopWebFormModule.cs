@@ -4,9 +4,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
-using System.Reflection.Emit;
 using System.Web;
 using System.Web.UI;
 
@@ -32,6 +30,9 @@ namespace FastAop.Factory
         {
             var list = new List<FieldInfo>();
             var page = application.Context.CurrentHandler as Page;
+
+            if (page == null)
+                return;
 
             var type = page.GetType().BaseType;
             cache.TryGetValue(type, out list);
