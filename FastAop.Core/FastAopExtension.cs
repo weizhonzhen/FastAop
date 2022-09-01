@@ -370,9 +370,16 @@ namespace Microsoft.Extensions.DependencyInjection
                         }
                     }
 
-                    item.SetValue(temp, serviceProvider.GetService(item.FieldType));
+                    if (!item.FieldType.IsInterface && !item.FieldType.GetInterfaces().Any())
+                        item.SetValue(temp, serviceProvider.GetService(item.FieldType));
+                    else
+                        item.SetValueDirect(__makeref(temp), serviceProvider.GetService(item.FieldType));
 
-                    obj.GetType().GetRuntimeFields().First().SetValue(obj, temp);
+                    var objFildType = obj.GetType().GetRuntimeFields().First().FieldType;
+                    if (!objFildType.IsInterface && !objFildType.GetInterfaces().Any())
+                        obj.GetType().GetRuntimeFields().First().SetValue(obj, temp);
+                    else
+                        obj.GetType().GetRuntimeFields().First().SetValueDirect(__makeref(obj), temp);
                 }
             }
 
@@ -450,13 +457,26 @@ namespace Microsoft.Extensions.DependencyInjection
                         }
 
                         var newItem = temp.GetType().GetRuntimeFields().ToList().Find(a => a.FieldType == item.FieldType && a.Name == item.Name);
-                        newItem.SetValue(temp, serviceProvider.GetService(item.FieldType));
-                        obj.GetType().GetRuntimeFields().First().SetValue(obj, temp);
+
+                        if (!item.FieldType.IsInterface && !item.FieldType.GetInterfaces().Any())
+                            newItem.SetValue(temp, serviceProvider.GetService(item.FieldType));
+                        else
+                            newItem.SetValueDirect(__makeref(temp), serviceProvider.GetService(item.FieldType));
+
+                        var objFildType = obj.GetType().GetRuntimeFields().First().FieldType;
+                        if (!objFildType.IsInterface && !objFildType.GetInterfaces().Any())
+                            obj.GetType().GetRuntimeFields().First().SetValue(obj, temp);
+                        else
+                            obj.GetType().GetRuntimeFields().First().SetValueDirect(__makeref(obj), temp);
                     }
                     else
                     {
                         var newItem = obj.GetType().GetRuntimeFields().ToList().Find(a => a.FieldType == item.FieldType && a.Name == item.Name);
-                        newItem.SetValue(obj, serviceProvider.GetService(item.FieldType));
+
+                        if (!item.FieldType.IsInterface && !item.FieldType.GetInterfaces().Any())
+                            newItem.SetValue(obj, serviceProvider.GetService(item.FieldType));
+                        else
+                            newItem.SetValueDirect(__makeref(obj), serviceProvider.GetService(item.FieldType));
                     }
                 });
             }
