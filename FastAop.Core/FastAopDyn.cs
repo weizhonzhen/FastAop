@@ -50,13 +50,13 @@ namespace FastAop.Core
             if (model.serviceType.IsInterface)
                 throw new Exception($"serviceType is Interface class,class name:{model.serviceType.Name}");
 
-            var assemblyName = new AssemblyName("FastAop.ILGrator.Core");
+            var assemblyName = new AssemblyName(model.serviceType.FullName);
             var assembly = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
             var module = assembly.DefineDynamicModule(assemblyName.Name);
-            var builder = module.DefineType($"Aop_{assemblyName}", TypeAttributes.Public, model.serviceType, new Type[0]);
+            var builder = module.DefineType(assemblyName.Name, TypeAttributes.Public, model.serviceType, new Type[0]);
 
             //Constructor method
-            var field = builder.DefineField($"Aop_{model.serviceType.Name}_Field", model.serviceType, FieldAttributes.Private);
+            var field = builder.DefineField(assemblyName.Name, model.serviceType, FieldAttributes.Private);
             var constructor = builder.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, Type.EmptyTypes);
 
             var cIL = constructor.GetILGenerator();

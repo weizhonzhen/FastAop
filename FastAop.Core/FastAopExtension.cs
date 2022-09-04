@@ -344,30 +344,27 @@ namespace Microsoft.Extensions.DependencyInjection
                 if (obj == null)
                     continue;
 
-                if (obj.GetType().FullName == "Aop_FastAop.ILGrator.Core")
+                if (temp == null)
                 {
-                    if (temp == null)
+                    var type = obj.GetType().GetRuntimeFields().First().FieldType;
+                    var model = Constructor.Get(type, null);
+                    temp = Activator.CreateInstance(type, model.dynParam.ToArray());
+
+                    foreach (var param in temp.GetType().GetRuntimeFields())
                     {
-                        var type = obj.GetType().GetRuntimeFields().First().FieldType;
-                        var model = Constructor.Get(type, null);
-                        temp = Activator.CreateInstance(type, model.dynParam.ToArray());
+                        if (param.GetCustomAttribute<Autowired>() == null)
+                            continue;
 
-                        foreach (var param in temp.GetType().GetRuntimeFields())
-                        {
-                            if (param.GetCustomAttribute<Autowired>() == null)
-                                continue;
+                        if (!param.Attributes.HasFlag(FieldAttributes.InitOnly))
+                            throw new AopException($"{type.Name} field {item} attribute must readonly");
 
-                            if (!param.Attributes.HasFlag(FieldAttributes.InitOnly))
-                                throw new AopException($"{type.Name} field {item} attribute must readonly");
+                        if (param.FieldType.isSysType())
+                            throw new Exception($"{type.Name} field {item} is system type not support");
 
-                            if (param.FieldType.isSysType())
-                                throw new Exception($"{type.Name} field {item} is system type not support");
-
-                            if (param.FieldType.IsInterface)
-                                Instance(serviceProvider.GetService(param.FieldType).GetType(), isFastAopCall);
-                            else if (param.FieldType.GetInterfaces().Any())
-                                Instance(serviceProvider.GetService(param.FieldType.GetInterfaces().First()).GetType(), isFastAopCall);
-                        }
+                        if (param.FieldType.IsInterface)
+                            Instance(serviceProvider.GetService(param.FieldType).GetType(), isFastAopCall);
+                        else if (param.FieldType.GetInterfaces().Any())
+                            Instance(serviceProvider.GetService(param.FieldType.GetInterfaces().First()).GetType(), isFastAopCall);
                     }
 
                     if (!item.FieldType.IsInterface && !item.FieldType.GetInterfaces().Any())
@@ -386,9 +383,9 @@ namespace Microsoft.Extensions.DependencyInjection
             return obj;
         }
 
-        private static object InstanceGeneric(IServiceCollection serviceCollection,List<Type> list,Type b,bool isFastAopCall)
+        private static object InstanceGeneric(IServiceCollection serviceCollection, List<Type> list, Type b, bool isFastAopCall)
         {
-            object obj=null, temp=null;
+            object obj = null, temp = null;
             foreach (var item in b.GetRuntimeFields())
             {
                 if (item.GetCustomAttribute<Autowired>() == null)
@@ -430,54 +427,42 @@ namespace Microsoft.Extensions.DependencyInjection
                     if (obj == null)
                         return;
 
-                    if (obj.GetType().FullName == "Aop_FastAop.ILGrator.Core")
+                    if (temp == null)
                     {
-                        if (temp == null)
+                        var type = obj.GetType().GetRuntimeFields().First().FieldType;
+                        var model = Constructor.Get(type, null);
+                        temp = Activator.CreateInstance(type, model.dynParam.ToArray());
+
+                        foreach (var param in temp.GetType().GetRuntimeFields())
                         {
-                            var type = obj.GetType().GetRuntimeFields().First().FieldType;
-                            var model = Constructor.Get(type, null);
-                            temp = Activator.CreateInstance(type, model.dynParam.ToArray());
+                            if (param.GetCustomAttribute<Autowired>() == null)
+                                continue;
 
-                            foreach (var param in temp.GetType().GetRuntimeFields())
-                            {
-                                if (param.GetCustomAttribute<Autowired>() == null)
-                                    continue;
+                            if (!param.Attributes.HasFlag(FieldAttributes.InitOnly))
+                                throw new AopException($"{type.Name} field {item} attribute must readonly");
 
-                                if (!param.Attributes.HasFlag(FieldAttributes.InitOnly))
-                                    throw new AopException($"{type.Name} field {item} attribute must readonly");
+                            if (param.FieldType.isSysType())
+                                throw new Exception($"{type.Name} field {item} is system type not support");
 
-                                if (param.FieldType.isSysType())
-                                    throw new Exception($"{type.Name} field {item} is system type not support");
-
-                                if (param.FieldType.GetInterfaces().Any())
-                                    InstanceGeneric(serviceCollection, list, serviceProvider.GetService(param.FieldType.GetInterfaces().First()).GetType(), isFastAopCall);
-                                else
-                                    InstanceGeneric(serviceCollection, list, serviceProvider.GetService(param.FieldType).GetType(), isFastAopCall);
-                            }
+                            if (param.FieldType.GetInterfaces().Any())
+                                InstanceGeneric(serviceCollection, list, serviceProvider.GetService(param.FieldType.GetInterfaces().First()).GetType(), isFastAopCall);
+                            else
+                                InstanceGeneric(serviceCollection, list, serviceProvider.GetService(param.FieldType).GetType(), isFastAopCall);
                         }
-
-                        var newItem = temp.GetType().GetRuntimeFields().ToList().Find(a => a.FieldType == item.FieldType && a.Name == item.Name);
-
-                        if (!item.FieldType.IsInterface && !item.FieldType.GetInterfaces().Any())
-                            newItem.SetValue(temp, serviceProvider.GetService(item.FieldType));
-                        else
-                            newItem.SetValueDirect(__makeref(temp), serviceProvider.GetService(item.FieldType));
-
-                        var objFildType = obj.GetType().GetRuntimeFields().First().FieldType;
-                        if (!objFildType.IsInterface && !objFildType.GetInterfaces().Any())
-                            obj.GetType().GetRuntimeFields().First().SetValue(obj, temp);
-                        else
-                            obj.GetType().GetRuntimeFields().First().SetValueDirect(__makeref(obj), temp);
                     }
+
+                    var newItem = temp.GetType().GetRuntimeFields().ToList().Find(a => a.FieldType == item.FieldType && a.Name == item.Name);
+
+                    if (!item.FieldType.IsInterface && !item.FieldType.GetInterfaces().Any())
+                        newItem.SetValue(temp, serviceProvider.GetService(item.FieldType));
                     else
-                    {
-                        var newItem = obj.GetType().GetRuntimeFields().ToList().Find(a => a.FieldType == item.FieldType && a.Name == item.Name);
+                        newItem.SetValueDirect(__makeref(temp), serviceProvider.GetService(item.FieldType));
 
-                        if (!item.FieldType.IsInterface && !item.FieldType.GetInterfaces().Any())
-                            newItem.SetValue(obj, serviceProvider.GetService(item.FieldType));
-                        else
-                            newItem.SetValueDirect(__makeref(obj), serviceProvider.GetService(item.FieldType));
-                    }
+                    var objFildType = obj.GetType().GetRuntimeFields().First().FieldType;
+                    if (!objFildType.IsInterface && !objFildType.GetInterfaces().Any())
+                        obj.GetType().GetRuntimeFields().First().SetValue(obj, temp);
+                    else
+                        obj.GetType().GetRuntimeFields().First().SetValueDirect(__makeref(obj), temp);
                 });
             }
 

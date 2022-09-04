@@ -75,10 +75,19 @@ namespace FastAop.Core
             if (model.serviceType.GetConstructor(arryType) == null)
                 throw new Exception($"serviceType class have Constructor Paramtes not support,class name:{model.serviceType.Name}");
 
-            var assemblyName = new AssemblyName("FastAop.ILGrator.Core");
+            AssemblyName assemblyName;
+
+            if (!model.interfaceType.IsGenericType)
+                assemblyName = new AssemblyName(model.interfaceType.FullName);
+            else
+            {
+                var modelName = model.interfaceType.GetGenericArguments().Length > 0 ? model.interfaceType.GetGenericArguments()[0].FullName : "";
+                assemblyName = new AssemblyName($"{model.interfaceType.Namespace}.{model.interfaceType.Name.Replace("`1", "")}<{modelName}>");
+            }
+
             var assembly = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
             var module = assembly.DefineDynamicModule(assemblyName.Name);
-            var builder = module.DefineType($"Aop_{assemblyName}", TypeAttributes.Public, null, new Type[] { model.interfaceType });
+            var builder = module.DefineType(assemblyName.Name, TypeAttributes.Public, null, new Type[] { model.interfaceType });
 
             //Constructor method
             var field = builder.DefineField($"Aop_{model.serviceType.Name}_Field", model.serviceType, FieldAttributes.Private);
