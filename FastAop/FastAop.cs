@@ -72,7 +72,10 @@ namespace FastAop
                         if (!b.IsInterface && b.GetInterfaces().Any())
                             _types.SetValue(b.GetInterfaces().First(), FastAop.Instance(b, b.GetInterfaces().First(), aopType));
                         else if (!b.IsInterface && !b.GetInterfaces().Any())
-                            Dic.SetValueDyn(b, FastAopDyn.Instance(b, aopType));
+                        {
+                            object asd = FastAopDyn.Instance(b, aopType);
+                            Dic.SetValueDyn(b, asd);
+                        }
                     });
                 } 
                 catch(Exception ex)
@@ -256,47 +259,44 @@ namespace FastAop
                     obj = _types.GetValue(b.GetInterfaces().First());
                 else
                     obj = Dic.GetValueDyn(b);
-                   
+
                 if (obj == null)
                     continue;
 
-                if (obj.GetType().FullName == "Aop_FastAop.ILGrator")
+                if (temp == null)
                 {
-                    if (temp == null)
+                    var type = obj.GetType().GetRuntimeFields().First().FieldType;
+                    var model = Constructor.Constructor.Get(type, null);
+                    temp = Activator.CreateInstance(type, model.dynParam.ToArray());
+
+                    foreach (var param in temp.GetType().GetRuntimeFields())
                     {
-                        var type = obj.GetType().GetRuntimeFields().First().FieldType;
-                        var model = Constructor.Constructor.Get(type, null);
-                        temp = Activator.CreateInstance(type, model.dynParam.ToArray());
+                        if (param.GetCustomAttribute<Autowired>() == null)
+                            continue;
 
-                        foreach (var param in temp.GetType().GetRuntimeFields())
-                        {
-                            if (param.GetCustomAttribute<Autowired>() == null)
-                                continue;
+                        if (!param.Attributes.HasFlag(FieldAttributes.InitOnly))
+                            throw new AopException($"{b.Name} field {item} attribute must readonly");
 
-                            if (!param.Attributes.HasFlag(FieldAttributes.InitOnly))
-                                throw new AopException($"{b.Name} field {item} attribute must readonly");
+                        if (item.FieldType.isSysType())
+                            throw new Exception($"{b.Name} field {item} is system type not support");
 
-                            if (item.FieldType.isSysType())
-                                throw new Exception($"{b.Name} field {item} is system type not support");
-
-                            if (param.FieldType.IsInterface)
-                                Instance(_types.GetValue(param.FieldType).GetType());
-                            else if (param.FieldType.GetInterfaces().Any())
-                                Instance(_types.GetValue(param.FieldType.GetInterfaces().First()).GetType());
-                            else
-                                Instance(Dic.GetValueDyn(param.FieldType).GetType());
-                        }
+                        if (param.FieldType.IsInterface)
+                            Instance(_types.GetValue(param.FieldType).GetType());
+                        else if (param.FieldType.GetInterfaces().Any())
+                            Instance(_types.GetValue(param.FieldType.GetInterfaces().First()).GetType());
+                        else
+                            Instance(Dic.GetValueDyn(param.FieldType).GetType());
                     }
-
-                    if (item.FieldType.IsInterface)
-                        item.SetValueDirect(__makeref(temp), _types.GetValue(item.FieldType));
-                    else if (item.FieldType.GetInterfaces().Any())
-                        item.SetValueDirect(__makeref(temp), _types.GetValue(item.FieldType.GetInterfaces().First()));
-                    else
-                        item.SetValue(temp, Dic.GetValueDyn(item.FieldType));
-
-                    obj.GetType().GetRuntimeFields().First().SetValueDirect(__makeref(obj), temp);
                 }
+
+                if (item.FieldType.IsInterface)
+                    item.SetValueDirect(__makeref(temp), _types.GetValue(item.FieldType));
+                else if (item.FieldType.GetInterfaces().Any())
+                    item.SetValueDirect(__makeref(temp), _types.GetValue(item.FieldType.GetInterfaces().First()));
+                else
+                    item.SetValue(temp, Dic.GetValueDyn(item.FieldType));
+
+                obj.GetType().GetRuntimeFields().First().SetValueDirect(__makeref(obj), temp);
             }
 
             return obj;
@@ -355,28 +355,20 @@ namespace FastAop
                                 if (obj == null)
                                     return;
 
-                                if (obj.GetType().FullName == "Aop_FastAop.ILGrator")
+                                if (temp == null)
                                 {
-                                    if (temp == null)
-                                    {
-                                        var tempType = obj.GetType().GetRuntimeFields().First().FieldType;
-                                        var model = Constructor.Constructor.Get(tempType, null);
-                                        temp = Activator.CreateInstance(tempType, model.dynParam.ToArray());
-                                    }
-                                    var newItem = temp.GetType().GetRuntimeFields().ToList().Find(a => a.FieldType == item.FieldType && a.Name == item.Name);
-
-                                    if (item.FieldType.IsInterface)
-                                        newItem.SetValueDirect(__makeref(temp), _types.GetValue(item.FieldType));
-                                    else
-                                        newItem.SetValue(temp, Dic.GetValueDyn(item.FieldType));
-
-                                    obj.GetType().GetRuntimeFields().First().SetValueDirect(__makeref(obj), temp);
+                                    var tempType = obj.GetType().GetRuntimeFields().First().FieldType;
+                                    var model = Constructor.Constructor.Get(tempType, null);
+                                    temp = Activator.CreateInstance(tempType, model.dynParam.ToArray());
                                 }
+                                var newItem = temp.GetType().GetRuntimeFields().ToList().Find(a => a.FieldType == item.FieldType && a.Name == item.Name);
+
+                                if (item.FieldType.IsInterface)
+                                    newItem.SetValueDirect(__makeref(temp), _types.GetValue(item.FieldType));
                                 else
-                                {
-                                    var newItem = obj.GetType().GetRuntimeFields().ToList().Find(a => a.FieldType == item.FieldType && a.Name == item.Name);
-                                    newItem.SetValueDirect(__makeref(obj), _types.GetValue(item.FieldType));
-                                }
+                                    newItem.SetValue(temp, Dic.GetValueDyn(item.FieldType));
+
+                                obj.GetType().GetRuntimeFields().First().SetValueDirect(__makeref(obj), temp);
                             });
                         }
 
@@ -575,13 +567,22 @@ namespace FastAop
             if (model.serviceType.GetConstructor(arryType) == null)
                 throw new Exception($"serviceType class have Constructor Paramtes not support,class name:{model.serviceType.Name}");
 
-            var assemblyName = new AssemblyName($"FastAop.ILGrator");
+            AssemblyName assemblyName;
+
+            if (!model.interfaceType.IsGenericType)
+                assemblyName = new AssemblyName(model.interfaceType.FullName);
+            else
+            {
+                var modelName = model.interfaceType.GetGenericArguments().Length > 0 ? model.interfaceType.GetGenericArguments()[0].FullName : "";
+                assemblyName = new AssemblyName($"{model.interfaceType.Namespace}.{model.interfaceType.Name.Replace("`1", "")}<{modelName}>");
+            }
+
             var assembly = AppDomain.CurrentDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
             var module = assembly.DefineDynamicModule(assemblyName.Name);
-            var builder = module.DefineType($"Aop_{assemblyName}", TypeAttributes.Public, null, new Type[] { model.interfaceType });
+            var builder = module.DefineType(assemblyName.Name, TypeAttributes.Public, null, new Type[] { model.interfaceType });
 
             //Constructor method
-            var field = builder.DefineField($"Aop_{model.serviceType.Name}_Field", model.serviceType, FieldAttributes.Private);
+            var field = builder.DefineField(assemblyName.Name, model.serviceType, FieldAttributes.Private);
             var constructor = builder.DefineConstructor(MethodAttributes.Public, CallingConventions.Standard, arryType);
             var cIL = constructor.GetILGenerator();
             cIL.Emit(OpCodes.Ldarg_0);
