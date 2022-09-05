@@ -1,11 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 
 namespace FastAop.Core.Cache
 {
     internal class FastAopCache
     {
-        private static Dictionary<string, Type> cache = new Dictionary<string, Type>();
+        private static ConcurrentDictionary<string, Type> cache = new ConcurrentDictionary<string, Type>();
 
         internal static Type GetType(string key)
         {
@@ -13,7 +13,7 @@ namespace FastAop.Core.Cache
                 return cache[key];
             else
             {
-                cache.Add(key, Type.GetType(key));
+                cache.TryAdd(key, Type.GetType(key));
                 return cache[key];
             }
         }
