@@ -268,26 +268,26 @@ namespace FastAop
                 {
                     var model = Constructor.Constructor.Get(b, null);
                     temp = Activator.CreateInstance(b, model.dynParam.ToArray());
-
-                    foreach (var param in temp.GetType().GetRuntimeFields())
-                    {
-                        if (param.GetCustomAttribute<Autowired>() == null)
-                            continue;
-
-                        if (!param.Attributes.HasFlag(FieldAttributes.InitOnly))
-                            throw new AopException($"{b.Name} field {item} attribute must readonly");
-
-                        if (item.FieldType.isSysType())
-                            throw new Exception($"{b.Name} field {item} is system type not support");
-
-                        if (param.FieldType.IsInterface)
-                            Instance(_types.GetValue(param.FieldType).GetType());
-                        else if (param.FieldType.GetInterfaces().Any())
-                            Instance(_types.GetValue(param.FieldType.GetInterfaces().First()).GetType());
-                        else
-                            Instance(Dic.GetValueDyn(param.FieldType).GetType());
-                    }
                 }
+
+                foreach (var param in temp.GetType().GetRuntimeFields())
+                {
+                    if (param.GetCustomAttribute<Autowired>() == null)
+                        continue;
+
+                    if (!param.Attributes.HasFlag(FieldAttributes.InitOnly))
+                        throw new AopException($"{b.Name} field {item} attribute must readonly");
+
+                    if (item.FieldType.isSysType())
+                        throw new Exception($"{b.Name} field {item} is system type not support");
+
+                    if (param.FieldType.IsInterface)
+                        Instance(_types.GetValue(param.FieldType).GetType());
+                    else if (param.FieldType.GetInterfaces().Any())
+                        Instance(_types.GetValue(param.FieldType.GetInterfaces().First()).GetType());
+                    else
+                        Instance(Dic.GetValueDyn(param.FieldType).GetType());
+                }                
 
                 if (item.FieldType.IsInterface)
                     item.SetValueDirect(__makeref(temp), _types.GetValue(item.FieldType));
@@ -296,7 +296,14 @@ namespace FastAop
                 else
                     item.SetValue(temp, Dic.GetValueDyn(item.FieldType));
 
-                obj.GetType().GetRuntimeFields().First().SetValueDirect(__makeref(obj), temp);
+                var objFildType = obj.GetType().GetRuntimeFields().First().FieldType;
+                if (!objFildType.IsInterface && !objFildType.GetInterfaces().Any())
+                    obj.GetType().GetRuntimeFields().First().SetValue(obj, temp);
+                else
+                    obj.GetType().GetRuntimeFields().First().SetValueDirect(__makeref(obj), temp);
+
+                if (obj.GetType().FullName.EndsWith(".dynamic"))
+                    objFildType.GetRuntimeFields().First().SetValue(obj, _types.GetValue(item.FieldType) ?? Dic.GetValueDyn(item.FieldType));
             }
 
             return obj;
@@ -408,7 +415,7 @@ namespace FastAop
                     throw new Exception($"{b.Name} field {item} is system type not support");
 
                 if (_types.GetValue(item.FieldType) == null)
-                    Init(b.Namespace,webType);
+                    Init(b.Namespace, webType);
 
                 if (Dic.GetValueDyn(item.FieldType) == null && item.FieldType.IsGenericType)
                     throw new Exception($"FastAop.InitGeneric Method，{b.Name} field {item} is Generic Type");
@@ -434,53 +441,40 @@ namespace FastAop
                     if (obj == null)
                         return;
 
-                    if (obj.GetType().FullName == "Aop_FastAop.ILGrator")
+                    var type = obj.GetType().GetRuntimeFields().First().FieldType;
+                    if (temp == null)
                     {
-                        if (temp == null)
-                        {
-                            var type = obj.GetType().GetRuntimeFields().First().FieldType;
-                            var model = Constructor.Constructor.Get(type, null);
-                            temp = Activator.CreateInstance(type, model.dynParam.ToArray());
-
-                            foreach (var param in temp.GetType().GetRuntimeFields())
-                            {
-                                if (param.GetCustomAttribute<Autowired>() == null)
-                                    continue;
-
-                                if (!param.Attributes.HasFlag(FieldAttributes.InitOnly))
-                                    throw new AopException($"{type.Name} field {item} attribute must readonly");
-
-                                if (param.FieldType.isSysType())
-                                    throw new Exception($"{type.Name} field {item} is system type not support");
-
-                                if (param.FieldType.IsInterface)
-                                    InstanceGeneric(list, _types.GetValue(param.FieldType).GetType(), webType);
-                                else if (param.FieldType.GetInterfaces().Any())
-                                    InstanceGeneric(list, _types.GetValue(param.FieldType.GetInterfaces().First()).GetType(), webType);
-                            }
-                        }
-
-                        var newItem = temp.GetType().GetRuntimeFields().ToList().Find(a => a.FieldType == item.FieldType && a.Name == item.Name);
-                        if (item.FieldType.IsInterface)
-                            newItem.SetValueDirect(__makeref(temp), _types.GetValue(item.FieldType));
-                        else if (item.FieldType.GetInterfaces().Any())
-                            newItem.SetValueDirect(__makeref(temp), _types.GetValue(item.FieldType.GetInterfaces().First()));
-                        else
-                            newItem.SetValue(temp, Dic.GetValueDyn(item.FieldType));
-
-                        obj.GetType().GetRuntimeFields().First().SetValueDirect(__makeref(obj), temp);
+                        var model = Constructor.Constructor.Get(type, null);
+                        temp = Activator.CreateInstance(type, model.dynParam.ToArray());
                     }
+
+                    foreach (var param in temp.GetType().GetRuntimeFields())
+                    {
+                        if (param.GetCustomAttribute<Autowired>() == null)
+                            continue;
+
+                        if (!param.Attributes.HasFlag(FieldAttributes.InitOnly))
+                            throw new AopException($"{type.Name} field {item} attribute must readonly");
+
+                        if (param.FieldType.isSysType())
+                            throw new Exception($"{type.Name} field {item} is system type not support");
+
+                        if (param.FieldType.IsInterface)
+                            InstanceGeneric(list, _types.GetValue(param.FieldType).GetType(), webType);
+                        else if (param.FieldType.GetInterfaces().Any())
+                            InstanceGeneric(list, _types.GetValue(param.FieldType.GetInterfaces().First()).GetType(), webType);
+                    }
+
+                    var newItem = temp.GetType().GetRuntimeFields().ToList().Find(a => a.FieldType == item.FieldType && a.Name == item.Name);
+                    if (item.FieldType.IsInterface)
+                        newItem.SetValueDirect(__makeref(temp), _types.GetValue(item.FieldType));
+                    else if (item.FieldType.GetInterfaces().Any())
+                        newItem.SetValueDirect(__makeref(temp), _types.GetValue(item.FieldType.GetInterfaces().First()));
                     else
-                    {
-                        var newItem = obj.GetType().GetRuntimeFields().ToList().Find(a => a.FieldType == item.FieldType && a.Name == item.Name);
+                        newItem.SetValue(temp, Dic.GetValueDyn(item.FieldType));
 
-                        if (item.FieldType.IsInterface)
-                            newItem.SetValueDirect(__makeref(temp), _types.GetValue(item.FieldType));
-                        else if (item.FieldType.GetInterfaces().Any())
-                            newItem.SetValueDirect(__makeref(temp), _types.GetValue(item.FieldType.GetInterfaces().First()));
-                        else
-                            newItem.SetValue(temp, Dic.GetValueDyn(item.FieldType));
-                    }
+                    obj.GetType().GetRuntimeFields().First().SetValueDirect(__makeref(obj), temp);
+
                 });
             }
 
