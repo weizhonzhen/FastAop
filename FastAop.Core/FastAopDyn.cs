@@ -50,7 +50,7 @@ namespace FastAop.Core
             if (model.serviceType.IsInterface)
                 throw new Exception($"serviceType is Interface class,class name:{model.serviceType.Name}");
 
-            var assemblyName = new AssemblyName(model.serviceType.FullName);
+            var assemblyName = new AssemblyName($"{model.serviceType.FullName}.dynamic");
             var assembly = AssemblyBuilder.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run);
             var module = assembly.DefineDynamicModule(assemblyName.Name);
             var builder = module.DefineType(assemblyName.Name, TypeAttributes.Public, model.serviceType, new Type[0]);
