@@ -334,21 +334,21 @@ namespace Microsoft.Extensions.DependencyInjection
                 if (serviceProvider.GetService(item.FieldType) == null && !isFastAopCall)
                     throw new Exception($"{item.FieldType.FullName} not in ServiceCollection");
 
-                if (b.IsInterface)
-                    obj = serviceProvider.GetService(b);
-                else if (b.GetInterfaces().Any())
-                    obj = serviceProvider.GetService(b.GetInterfaces().First());
-                else
-                    continue;
+                obj = serviceProvider.GetService(b);
 
+                if (b.IsInterface && obj == null)
+                    obj = serviceProvider.GetService(b);
+                
+                if (b.GetInterfaces().Any() && obj == null)
+                    obj = serviceProvider.GetService(b.GetInterfaces().First());
+            
                 if (obj == null)
                     continue;
 
                 if (temp == null)
                 {
-                    var type = obj.GetType().GetRuntimeFields().First().FieldType;
-                    var model = Constructor.Get(type, null);
-                    temp = Activator.CreateInstance(type, model.dynParam.ToArray());
+                    var model = Constructor.Get(b, null);
+                    temp = Activator.CreateInstance(b, model.dynParam.ToArray());
 
                     foreach (var param in temp.GetType().GetRuntimeFields())
                     {
@@ -356,10 +356,10 @@ namespace Microsoft.Extensions.DependencyInjection
                             continue;
 
                         if (!param.Attributes.HasFlag(FieldAttributes.InitOnly))
-                            throw new AopException($"{type.Name} field {item} attribute must readonly");
+                            throw new AopException($"{b.Name} field {item} attribute must readonly");
 
                         if (param.FieldType.isSysType())
-                            throw new Exception($"{type.Name} field {item} is system type not support");
+                            throw new Exception($"{b.Name} field {item} is system type not support");
 
                         if (param.FieldType.IsInterface)
                             Instance(serviceProvider.GetService(param.FieldType).GetType(), isFastAopCall);
