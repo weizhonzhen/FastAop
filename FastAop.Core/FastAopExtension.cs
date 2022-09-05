@@ -338,10 +338,10 @@ namespace Microsoft.Extensions.DependencyInjection
 
                 if (b.IsInterface && obj == null)
                     obj = serviceProvider.GetService(b);
-                
+
                 if (b.GetInterfaces().Any() && obj == null)
                     obj = serviceProvider.GetService(b.GetInterfaces().First());
-            
+
                 if (obj == null)
                     continue;
 
@@ -349,35 +349,38 @@ namespace Microsoft.Extensions.DependencyInjection
                 {
                     var model = Constructor.Get(b, null);
                     temp = Activator.CreateInstance(b, model.dynParam.ToArray());
-
-                    foreach (var param in temp.GetType().GetRuntimeFields())
-                    {
-                        if (param.GetCustomAttribute<Autowired>() == null)
-                            continue;
-
-                        if (!param.Attributes.HasFlag(FieldAttributes.InitOnly))
-                            throw new AopException($"{b.Name} field {item} attribute must readonly");
-
-                        if (param.FieldType.isSysType())
-                            throw new Exception($"{b.Name} field {item} is system type not support");
-
-                        if (param.FieldType.IsInterface)
-                            Instance(serviceProvider.GetService(param.FieldType).GetType(), isFastAopCall);
-                        else if (param.FieldType.GetInterfaces().Any())
-                            Instance(serviceProvider.GetService(param.FieldType.GetInterfaces().First()).GetType(), isFastAopCall);
-                    }
-
-                    if (!item.FieldType.IsInterface && !item.FieldType.GetInterfaces().Any())
-                        item.SetValue(temp, serviceProvider.GetService(item.FieldType));
-                    else
-                        item.SetValueDirect(__makeref(temp), serviceProvider.GetService(item.FieldType));
-
-                    var objFildType = obj.GetType().GetRuntimeFields().First().FieldType;
-                    if (!objFildType.IsInterface && !objFildType.GetInterfaces().Any())
-                        obj.GetType().GetRuntimeFields().First().SetValue(obj, temp);
-                    else
-                        obj.GetType().GetRuntimeFields().First().SetValueDirect(__makeref(obj), temp);
                 }
+
+                foreach (var param in temp.GetType().GetRuntimeFields())
+                {
+                    if (param.GetCustomAttribute<Autowired>() == null)
+                        continue;
+
+                    if (!param.Attributes.HasFlag(FieldAttributes.InitOnly))
+                        throw new AopException($"{b.Name} field {item} attribute must readonly");
+
+                    if (param.FieldType.isSysType())
+                        throw new Exception($"{b.Name} field {item} is system type not support");
+
+                    if (param.FieldType.IsInterface)
+                        Instance(serviceProvider.GetService(param.FieldType).GetType(), isFastAopCall);
+                    else if (param.FieldType.GetInterfaces().Any())
+                        Instance(serviceProvider.GetService(param.FieldType.GetInterfaces().First()).GetType(), isFastAopCall);
+                }
+
+                if (!item.FieldType.IsInterface && !item.FieldType.GetInterfaces().Any())
+                    item.SetValue(temp, serviceProvider.GetService(item.FieldType));
+                else
+                    item.SetValueDirect(__makeref(temp), serviceProvider.GetService(item.FieldType));
+
+                var objFildType = obj.GetType().GetRuntimeFields().First().FieldType;
+                if (!objFildType.IsInterface && !objFildType.GetInterfaces().Any())
+                    obj.GetType().GetRuntimeFields().First().SetValue(obj, temp);
+                else
+                    obj.GetType().GetRuntimeFields().First().SetValueDirect(__makeref(obj), temp);
+
+                if (obj.GetType().FullName.EndsWith(".dynamic"))
+                    objFildType.GetRuntimeFields().First().SetValue(obj, serviceProvider.GetService(item.FieldType));
             }
 
             return obj;
@@ -427,29 +430,29 @@ namespace Microsoft.Extensions.DependencyInjection
                     if (obj == null)
                         return;
 
+                    var type = obj.GetType().GetRuntimeFields().First().FieldType;
                     if (temp == null)
                     {
-                        var type = obj.GetType().GetRuntimeFields().First().FieldType;
                         var model = Constructor.Get(type, null);
                         temp = Activator.CreateInstance(type, model.dynParam.ToArray());
-
-                        foreach (var param in temp.GetType().GetRuntimeFields())
-                        {
-                            if (param.GetCustomAttribute<Autowired>() == null)
-                                continue;
-
-                            if (!param.Attributes.HasFlag(FieldAttributes.InitOnly))
-                                throw new AopException($"{type.Name} field {item} attribute must readonly");
-
-                            if (param.FieldType.isSysType())
-                                throw new Exception($"{type.Name} field {item} is system type not support");
-
-                            if (param.FieldType.GetInterfaces().Any())
-                                InstanceGeneric(serviceCollection, list, serviceProvider.GetService(param.FieldType.GetInterfaces().First()).GetType(), isFastAopCall);
-                            else
-                                InstanceGeneric(serviceCollection, list, serviceProvider.GetService(param.FieldType).GetType(), isFastAopCall);
-                        }
                     }
+
+                    foreach (var param in temp.GetType().GetRuntimeFields())
+                    {
+                        if (param.GetCustomAttribute<Autowired>() == null)
+                            continue;
+
+                        if (!param.Attributes.HasFlag(FieldAttributes.InitOnly))
+                            throw new AopException($"{type.Name} field {item} attribute must readonly");
+
+                        if (param.FieldType.isSysType())
+                            throw new Exception($"{type.Name} field {item} is system type not support");
+
+                        if (param.FieldType.GetInterfaces().Any())
+                            InstanceGeneric(serviceCollection, list, serviceProvider.GetService(param.FieldType.GetInterfaces().First()).GetType(), isFastAopCall);
+                        else
+                            InstanceGeneric(serviceCollection, list, serviceProvider.GetService(param.FieldType).GetType(), isFastAopCall);
+                    }                    
 
                     var newItem = temp.GetType().GetRuntimeFields().ToList().Find(a => a.FieldType == item.FieldType && a.Name == item.Name);
 
