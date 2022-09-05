@@ -253,21 +253,21 @@ namespace FastAop
                 if (!item.FieldType.IsInterface && !item.FieldType.GetInterfaces().Any() && Dic.GetValueDyn(item.FieldType) == null)
                     throw new Exception($"FastAop.Init Method，{b.Name} field {item}  not in ServiceCollection");
 
-                if (b.IsInterface)
-                    obj = _types.GetValue(b);
-                else if (b.GetInterfaces().Any())
-                    obj = _types.GetValue(b.GetInterfaces().First());
-                else
-                    obj = Dic.GetValueDyn(b);
+                obj = Dic.GetValueDyn(b);
 
+                if (b.IsInterface && obj == null)
+                    obj = _types.GetValue(b);
+                
+                if (b.GetInterfaces().Any() && obj == null)
+                    obj = _types.GetValue(b.GetInterfaces().First());
+                
                 if (obj == null)
                     continue;
 
                 if (temp == null)
                 {
-                    var type = obj.GetType().GetRuntimeFields().First().FieldType;
-                    var model = Constructor.Constructor.Get(type, null);
-                    temp = Activator.CreateInstance(type, model.dynParam.ToArray());
+                    var model = Constructor.Constructor.Get(b, null);
+                    temp = Activator.CreateInstance(b, model.dynParam.ToArray());
 
                     foreach (var param in temp.GetType().GetRuntimeFields())
                     {
