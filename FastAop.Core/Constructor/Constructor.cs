@@ -10,23 +10,33 @@ namespace FastAop.Core.Constructor
     {
         internal static int depth = 0;
 
-        internal static void Param(IServiceCollection serviceCollection, Type paramType, Type aopType)
+        internal static void Param(IServiceCollection serviceCollection, Type paramType, Type aopType, ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
         {
             if (paramType.isSysType())
                 return;
 
+            object obj = null;
+            var serverType = paramType;
             if (!paramType.IsInterface && paramType.GetInterfaces().Any())
             {
-                serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == paramType.GetInterfaces().First()));
-                serviceCollection.AddScoped(paramType.GetInterfaces().First(), FastAop.Instance(paramType, paramType.GetInterfaces().First(), aopType).GetType());
-                return;
+                serverType = paramType.GetInterfaces().First();
+                obj = FastAop.Instance(paramType, paramType.GetInterfaces().First(), aopType);
             }
             else if (!paramType.IsInterface && !paramType.GetInterfaces().Any())
-            {
-                serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == paramType));
-                serviceCollection.AddScoped(paramType, s => { return FastAopDyn.Instance(paramType, aopType); });
+                obj = FastAopDyn.Instance(paramType, aopType);
+
+            serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == serverType));
+            if (serviceLifetime == ServiceLifetime.Scoped && obj != null)
+                serviceCollection.AddScoped(serverType, s => { return obj; });
+
+            if (serviceLifetime == ServiceLifetime.Transient && obj != null)
+                serviceCollection.AddTransient(serverType, s => { return obj; });
+
+            if (serviceLifetime == ServiceLifetime.Singleton && obj != null)
+                serviceCollection.AddSingleton(serverType, s => { return obj; });
+
+            if (obj != null)
                 return;
-            }
 
             if (paramType.IsInterface && serviceCollection.BuildServiceProvider().GetService(paramType) == null)
             {
@@ -44,13 +54,23 @@ namespace FastAop.Core.Constructor
                             if (depth > 10)
                                 throw new Exception($"Type Name:{param.FullName},Parameters Type:{string.Join(",", c.GetParameters().Select(g => g.Name))} repeat using");
 
-                            Param(serviceCollection, p.ParameterType, aopType);
+                            Param(serviceCollection, p.ParameterType, aopType, serviceLifetime);
                         });
                     });
                 }
 
-                serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == paramType));
-                serviceCollection.AddScoped(paramType, FastAop.Instance(param, paramType).GetType());
+                serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == serverType));
+                obj = FastAop.Instance(param, serverType);
+
+                if (serviceLifetime == ServiceLifetime.Scoped)
+                    serviceCollection.AddScoped(serverType, s => { return obj; });
+
+                if (serviceLifetime == ServiceLifetime.Transient)
+                    serviceCollection.AddTransient(serverType, s => { return obj; });
+
+                if (serviceLifetime == ServiceLifetime.Singleton)
+                    serviceCollection.AddSingleton(serverType, s => { return obj; });
+
                 FastAopExtension.serviceProvider = serviceCollection.BuildServiceProvider();
                 return;
             }
