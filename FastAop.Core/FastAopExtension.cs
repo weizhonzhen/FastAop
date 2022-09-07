@@ -24,7 +24,7 @@ namespace Microsoft.Extensions.DependencyInjection
 
         }
 
-        public static IServiceCollection AddFastAop(this IServiceCollection serviceCollection, string nameSpaceService, Type aopType=null)
+        public static IServiceCollection AddFastAop(this IServiceCollection serviceCollection, string nameSpaceService, Type aopType = null, ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
         {
             if (string.IsNullOrEmpty(nameSpaceService))
                 return serviceCollection;
@@ -62,22 +62,33 @@ namespace Microsoft.Extensions.DependencyInjection
                             Constructor.depth = 0;
                             c.GetParameters().ToList().ForEach(p =>
                             {
-                                Constructor.Param(serviceCollection, p.ParameterType, aopType);
+                                Constructor.Param(serviceCollection, p.ParameterType, aopType, serviceLifetime);
                             });
                         });
 
+                        var type = b;
+                        object obj = null;
                         if (!b.IsInterface && b.GetInterfaces().Any())
                         {
-                            serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == b.GetInterfaces().First()));
-                            serviceCollection.AddScoped(b.GetInterfaces().First(), FastAop.Core.FastAop.Instance(b, b.GetInterfaces().First(), aopType).GetType());
+                            type = b.GetInterfaces().First();
+                            obj = FastAop.Core.FastAop.Instance(b, b.GetInterfaces().First(), aopType);
                         }
                         else if (!b.IsInterface && !b.GetInterfaces().Any())
-                        {
-                            serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == b));
-                            serviceCollection.AddScoped(b, s => { return FastAopDyn.Instance(b, aopType); });
-                        }
+                            obj = FastAopDyn.Instance(b, aopType);
+
+                        if (obj == null)
+                            return;
+
+                        if (serviceLifetime == ServiceLifetime.Scoped)
+                            serviceCollection.AddScoped(type, s => { return obj; });
+
+                        if (serviceLifetime == ServiceLifetime.Transient)
+                            serviceCollection.AddTransient(type, s => { return obj; });
+
+                        if (serviceLifetime == ServiceLifetime.Singleton)
+                            serviceCollection.AddSingleton(type, s => { return obj; });
                     });
-                } 
+                }
                 catch (Exception ex)
                 {
                     if (ex is AopException)
@@ -98,7 +109,7 @@ namespace Microsoft.Extensions.DependencyInjection
             return serviceCollection;
         }
 
-        public static IServiceCollection AddFastAopGeneric(this IServiceCollection serviceCollection, string nameSpaceService, string nameSpaceModel, Type aopType=null)
+        public static IServiceCollection AddFastAopGeneric(this IServiceCollection serviceCollection, string nameSpaceService, string nameSpaceModel, Type aopType = null, ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
         {
             if (string.IsNullOrEmpty(nameSpaceService))
                 return serviceCollection;
@@ -134,7 +145,7 @@ namespace Microsoft.Extensions.DependencyInjection
                             Constructor.depth = 0;
                             c.GetParameters().ToList().ForEach(p =>
                             {
-                                Constructor.Param(serviceCollection, p.ParameterType, aopType);
+                                Constructor.Param(serviceCollection, p.ParameterType, aopType, serviceLifetime);
                             });
                         });
 
@@ -148,20 +159,32 @@ namespace Microsoft.Extensions.DependencyInjection
                                     Constructor.depth = 0;
                                     c.GetParameters().ToList().ForEach(p =>
                                     {
-                                        Constructor.Param(serviceCollection, p.ParameterType, aopType);
+                                        Constructor.Param(serviceCollection, p.ParameterType, aopType, serviceLifetime);
                                     });
                                 });
 
                                 if (!b.IsInterface && b.GetInterfaces().Any())
                                 {
                                     var serviceType = b.MakeGenericType(new Type[1] { m });
-                                    serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == serviceType.GetInterfaces().First()));
-                                    serviceCollection.AddScoped(serviceType.GetInterfaces().First(), FastAop.Core.FastAop.Instance(serviceType, serviceType.GetInterfaces().First(), aopType).GetType());
+                                    var type = serviceType.GetInterfaces().First();
+                                    var obj = FastAop.Core.FastAop.Instance(serviceType, type, aopType);
+
+                                    serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == type));
+
+                                    if (serviceLifetime == ServiceLifetime.Scoped)
+                                        serviceCollection.AddScoped(type, s => { return obj; });
+
+                                    if (serviceLifetime == ServiceLifetime.Transient)
+                                        serviceCollection.AddTransient(type, s => { return obj; });
+
+                                    if (serviceLifetime == ServiceLifetime.Singleton)
+                                        serviceCollection.AddSingleton(type, s => { return obj; });
                                 }
                             });
                         }
                     });
-                } catch(Exception ex) 
+                }
+                catch (Exception ex)
                 {
                     if (ex is AopException)
                         throw ex;
@@ -176,12 +199,12 @@ namespace Microsoft.Extensions.DependencyInjection
             serviceCollection.Remove(serviceCollection.FirstOrDefault(c => c.ServiceType == typeof(IPageModelActivatorProvider)));
             serviceCollection.AddSingleton<IPageModelActivatorProvider, AopPageFactory>();
 
-            serviceCollection.AddFastAopAutowiredGeneric(nameSpaceService,nameSpaceModel,aopType);
+            serviceCollection.AddFastAopAutowiredGeneric(nameSpaceService, nameSpaceModel, aopType);
 
             return serviceCollection;
         }
 
-        public static IServiceCollection AddFastAopAutowired(this IServiceCollection serviceCollection, string nameSpaceService)
+        public static IServiceCollection AddFastAopAutowired(this IServiceCollection serviceCollection, string nameSpaceService, ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
         {
             var isFastAopCall = true;
             if (serviceProvider == null)
@@ -214,18 +237,23 @@ namespace Microsoft.Extensions.DependencyInjection
                         if (obj == null)
                             return;
 
+                        var type = b;
                         if (b.GetInterfaces().Any())
-                        {
-                            serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == b.GetInterfaces().First()));
-                            serviceCollection.AddScoped(b.GetInterfaces().First(), s => { return obj; });
-                        }
-                        else
-                        {
-                            serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == b));
-                            serviceCollection.AddScoped(b, s => { return obj; });
-                        }
+                            type = b.GetInterfaces().First();
+
+                        serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == type));
+
+                        if (serviceLifetime == ServiceLifetime.Scoped)
+                            serviceCollection.AddScoped(type, s => { return obj; });
+
+                        if (serviceLifetime == ServiceLifetime.Transient)
+                            serviceCollection.AddTransient(type, s => { return obj; });
+
+                        if (serviceLifetime == ServiceLifetime.Singleton)
+                            serviceCollection.AddSingleton(type, s => { return obj; });
                     });
-                } catch (Exception ex)
+                }
+                catch (Exception ex)
                 {
                     if (ex is AopException)
                         throw ex;
@@ -241,8 +269,8 @@ namespace Microsoft.Extensions.DependencyInjection
             serviceProvider = serviceCollection.BuildServiceProvider();
             return serviceCollection;
         }
-    
-        public static IServiceCollection AddFastAopAutowiredGeneric(this IServiceCollection serviceCollection, string nameSpaceService, string nameSpaceModel, Type aopType = null)
+
+        public static IServiceCollection AddFastAopAutowiredGeneric(this IServiceCollection serviceCollection, string nameSpaceService, string nameSpaceModel, Type aopType = null, ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
         {
             var isFastAopCall = true;
             if (serviceProvider == null)
@@ -264,13 +292,12 @@ namespace Microsoft.Extensions.DependencyInjection
                 {
                     assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
                     {
-                        
                         if (b.IsAbstract && b.IsSealed)
                             return;
 
                         if (!b.IsGenericType)
                         {
-                            AddFastAop(serviceCollection, b.Namespace,aopType);
+                            AddFastAop(serviceCollection, b.Namespace, aopType);
                             return;
                         }
 
@@ -283,18 +310,22 @@ namespace Microsoft.Extensions.DependencyInjection
                         {
                             var type = b.MakeGenericType(new Type[1] { m });
                             if (b.GetInterfaces().Any())
-                            {
-                                serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == type.GetInterfaces().First()));
-                                serviceCollection.AddScoped(type.GetInterfaces().First(), s => { return obj; });
-                            }
-                            else
-                            {
-                                serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == type));
+                                type = type.GetInterfaces().First();
+
+                            serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == type));
+
+                            if (serviceLifetime == ServiceLifetime.Scoped)
                                 serviceCollection.AddScoped(type, s => { return obj; });
-                            }
+
+                            if (serviceLifetime == ServiceLifetime.Transient)
+                                serviceCollection.AddTransient(type, s => { return obj; });
+
+                            if (serviceLifetime == ServiceLifetime.Singleton)
+                                serviceCollection.AddSingleton(type, s => { return obj; });
                         });
                     });
-                } catch (Exception ex)
+                }
+                catch (Exception ex)
                 {
                     if (ex is AopException)
                         throw ex;
@@ -452,7 +483,7 @@ namespace Microsoft.Extensions.DependencyInjection
                             InstanceGeneric(serviceCollection, list, serviceProvider.GetService(param.FieldType.GetInterfaces().First()).GetType(), isFastAopCall);
                         else
                             InstanceGeneric(serviceCollection, list, serviceProvider.GetService(param.FieldType).GetType(), isFastAopCall);
-                    }                    
+                    }
 
                     var newItem = temp.GetType().GetRuntimeFields().ToList().Find(a => a.FieldType == item.FieldType && a.Name == item.Name);
 
@@ -490,7 +521,8 @@ namespace Microsoft.Extensions.DependencyInjection
                         if (b.IsPublic && b.IsClass && !b.IsAbstract && !b.IsGenericType)
                             list.Add(b);
                     });
-                } catch { }
+                }
+                catch { }
             });
 
             return list;
