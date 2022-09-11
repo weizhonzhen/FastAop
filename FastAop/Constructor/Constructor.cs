@@ -1,7 +1,6 @@
-﻿using FastAop;
-using FastAop.Model;
+﻿using FastAop.Model;
 using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Reflection;
 
@@ -18,16 +17,21 @@ namespace FastAop.Constructor
 
             if (!paramType.IsInterface && paramType.GetInterfaces().Any())
             {
-                FastAop._types.SetValue(paramType.GetInterfaces().First(), FastAop.Instance(paramType, paramType.GetInterfaces().First()));
+                var interfaceType = paramType.GetInterfaces().First();
+                FastAop.ServiceInstance.SetValue(interfaceType, FastAop.Instance(paramType, interfaceType));
+                FastAop.ServiceAopType.SetValue(interfaceType, aopType);
+                FastAop.ServiceType.SetValue(interfaceType, paramType);
                 return;
             }
             else if (!paramType.IsInterface && !paramType.GetInterfaces().Any())
             {
                 Dic.SetValueDyn(paramType, FastAopDyn.Instance(paramType,aopType));
+                FastAop.ServiceAopType.SetValue(paramType, aopType);
+                FastAop.ServiceType.SetValue(paramType, paramType);
                 return;
             }
 
-            if (paramType.IsInterface && FastAop._types.GetValue(paramType) == null)
+            if (paramType.IsInterface && FastAop.ServiceInstance.GetValue(paramType) == null)
             {
                 var param = paramType.Assembly.GetTypes().ToList().Find(t => t.GetInterfaces().Any() && !t.IsAbstract && !t.IsSealed && t.GetInterfaces().ToList().Exists(e => e == paramType));
                 if (param == null)
@@ -49,7 +53,10 @@ namespace FastAop.Constructor
                             });
                         });
                     }
-                    FastAop._types.SetValue(paramType, FastAop.Instance(param, paramType,aopType));
+
+                    FastAop.ServiceInstance.SetValue(paramType, FastAop.Instance(param, paramType,aopType));
+                    FastAop.ServiceAopType.SetValue(paramType, aopType);
+                    FastAop.ServiceType.SetValue(paramType, param);
                 }
                 return;
             }
@@ -86,12 +93,8 @@ namespace FastAop.Constructor
                         model.dynParam.Add(Dic.GetValueDyn(p.ParameterType));
                     else if (!p.ParameterType.IsAbstract && !p.ParameterType.IsInterface)
                         model.dynParam.Add(Activator.CreateInstance(p.ParameterType));
-                    else if (FastAop._types.GetValue(p.ParameterType) == null && p.ParameterType.IsInterface && p.ParameterType.IsGenericType)
-                        throw new Exception($"FastAop.InitGeneric Method，{serviceType.FullName} Constructor have Parameter Generic Type");
-                    else if (FastAop._types.GetValue(p.ParameterType) == null && p.ParameterType.IsInterface)
-                        throw new Exception($"can't find {p.ParameterType.Name} Instance class");
                     else if (p.ParameterType.IsInterface)
-                        model.dynParam.Add(FastAop._types.GetValue(p.ParameterType));
+                        model.dynParam.Add(FastAop.ServiceInstance.GetValue(p.ParameterType));
                 });
             });
 
@@ -111,11 +114,57 @@ namespace FastAop.Constructor
     }
 }
 
-namespace System.Collections.Generic
+namespace System.Collections.Concurrent
 {
+    using FastAop;
     internal static class Dic
     {
-        internal static Object GetValue(this Dictionary<Type, object> item, Type key)
+        internal static object GetValue(this ConcurrentDictionary<Type, object> item, Type key)
+        {
+            if (key == null)
+                return null;
+
+            if (item == null)
+                return null;
+
+            object obj;
+
+            if (item.Keys.ToList().Exists(a => a == key))
+            {
+                obj = item[key];
+                var aopType = FastAop.ServiceAopType.GetValue(key);
+                var serviceType = FastAop.ServiceType.GetValue(key);
+
+                if (obj == null)
+                {
+                    obj = FastAop.Instance(serviceType, key, aopType);
+                    FastAop.ServiceInstance.SetValue(key, obj);
+                }
+
+                return obj;
+            }
+            else
+                return null;
+        }
+
+        internal static ConcurrentDictionary<Type, object> SetValue(this ConcurrentDictionary<Type, object> item, Type key, object value)
+        {
+            if (key == null)
+                return null;
+
+            if (item == null)
+                return null;
+
+            if (item.Keys.ToList().Exists(a => a == key))
+                item[key] = value;
+            else
+                item.TryAdd(key, value);
+
+            return item;
+        }
+
+
+        internal static Type GetValue(this ConcurrentDictionary<Type, Type> item, Type key)
         {
             if (key == null)
                 return null;
@@ -131,7 +180,7 @@ namespace System.Collections.Generic
                 return null;
         }
 
-        internal static Dictionary<Type, object> SetValue(this Dictionary<Type, object> item, Type key, object value)
+        internal static ConcurrentDictionary<Type, Type> SetValue(this ConcurrentDictionary<Type, Type> item, Type key, Type value)
         {
             if (key == null)
                 return null;
@@ -142,7 +191,7 @@ namespace System.Collections.Generic
             if (item.Keys.ToList().Exists(a => a == key))
                 item[key] = value;
             else
-                item.Add(key, value);
+                item.TryAdd(key, value);
 
             return item;
         }
@@ -151,14 +200,26 @@ namespace System.Collections.Generic
         {
             if (key == null)
                 return null;
-
-            if (FastAopDyn._types == null)
+                   
+            if (FastAopDyn.ServiceInstance == null)
                 return null;
 
-            key = FastAopDyn._types.Keys.ToList().Find(a => a == key);
+            object obj;
+            if (FastAopDyn.ServiceInstance.Keys.ToList().Exists(a => a == key))
+            {
+                obj = FastAopDyn.ServiceInstance[key];
 
-            if (FastAopDyn._types.Keys.ToList().Exists(a => a == key))
-                return FastAopDyn._types[key];
+                var aopType = FastAop.ServiceAopType.GetValue(key);
+                var serviceType = FastAop.ServiceType.GetValue(key);
+
+                if (obj == null)
+                {
+                    obj = FastAopDyn.Instance(serviceType, aopType);
+                    FastAopDyn.ServiceInstance.SetValue(key, obj);
+                }
+
+                return obj;
+            }
             else
                 return null;
         }
@@ -168,13 +229,13 @@ namespace System.Collections.Generic
             if (key == null)
                 return;
 
-            if (FastAopDyn._types == null)
+            if (FastAopDyn.ServiceInstance == null)
                 return;
 
-            if (FastAopDyn._types.Keys.ToList().Exists(a => a == key))
-                FastAopDyn._types[key] = value;
+            if (FastAopDyn.ServiceInstance.Keys.ToList().Exists(a => a == key))
+                FastAopDyn.ServiceInstance[key] = value;
             else
-                FastAopDyn._types.Add(key, value);
+                FastAopDyn.ServiceInstance.TryAdd(key, value);
 
             return;
         }
