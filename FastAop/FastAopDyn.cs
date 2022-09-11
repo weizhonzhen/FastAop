@@ -1,6 +1,7 @@
 ﻿using FastAop.Context;
 using FastAop.Model;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -11,7 +12,7 @@ namespace FastAop
 {
     public static class FastAopDyn
     {
-        internal static Dictionary<Type, dynamic> _types = new Dictionary<Type, dynamic>();
+        internal static ConcurrentDictionary<Type, dynamic> ServiceInstance = new ConcurrentDictionary<Type, dynamic>();
 
         public static dynamic Instance<T>(Type aopType = null)
         {
