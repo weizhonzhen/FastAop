@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -9,7 +10,7 @@ namespace FastAop.Context
     {
         public static T Resolve<T>()
         {
-            var data = FastAop._types.GetValue(typeof(T));
+            var data = FastAop.ServiceInstance.GetValue(typeof(T));
             if (typeof(T).IsInterface && data != null)
                 return (T)data;
             else if (typeof(T).IsInterface && data == null)
