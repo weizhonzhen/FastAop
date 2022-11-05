@@ -66,27 +66,23 @@ namespace Microsoft.Extensions.DependencyInjection
                             });
                         });
 
-                        var type = b;
-                        object obj = null;
                         if (!b.IsInterface && b.GetInterfaces().Any())
                         {
-                            type = b.GetInterfaces().First();
-                            obj = FastAop.Core.FastAop.Instance(b, b.GetInterfaces().First(), aopType);
+                            foreach (var iface in b.GetInterfaces())
+                            {
+                                var obj = FastAop.Core.FastAop.Instance(b, iface, aopType);
+                                if (obj == null)
+                                    return;
+                                serviceCollection.AddService(serviceLifetime, iface, obj);
+                            }
                         }
                         else if (!b.IsInterface && !b.GetInterfaces().Any())
-                            obj = FastAopDyn.Instance(b, aopType);
-
-                        if (obj == null)
-                            return;
-
-                        if (serviceLifetime == ServiceLifetime.Scoped)
-                            serviceCollection.AddScoped(type, s => { return obj; });
-
-                        if (serviceLifetime == ServiceLifetime.Transient)
-                            serviceCollection.AddTransient(type, s => { return obj; });
-
-                        if (serviceLifetime == ServiceLifetime.Singleton)
-                            serviceCollection.AddSingleton(type, s => { return obj; });
+                        {
+                            var obj = FastAopDyn.Instance(b, aopType);
+                            if (obj == null)
+                                return; 
+                            AddService(serviceCollection, serviceLifetime, b, obj);
+                        }
                     });
                 }
                 catch (Exception ex)
@@ -166,19 +162,12 @@ namespace Microsoft.Extensions.DependencyInjection
                                 if (!b.IsInterface && b.GetInterfaces().Any())
                                 {
                                     var serviceType = b.MakeGenericType(new Type[1] { m });
-                                    var type = serviceType.GetInterfaces().First();
-                                    var obj = FastAop.Core.FastAop.Instance(serviceType, type, aopType);
-
-                                    serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == type));
-
-                                    if (serviceLifetime == ServiceLifetime.Scoped)
-                                        serviceCollection.AddScoped(type, s => { return obj; });
-
-                                    if (serviceLifetime == ServiceLifetime.Transient)
-                                        serviceCollection.AddTransient(type, s => { return obj; });
-
-                                    if (serviceLifetime == ServiceLifetime.Singleton)
-                                        serviceCollection.AddSingleton(type, s => { return obj; });
+                                    foreach(var iface in serviceType.GetInterfaces())
+                                    {
+                                        var obj = FastAop.Core.FastAop.Instance(serviceType, iface, aopType);
+                                        serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == iface));
+                                        serviceCollection.AddService(serviceLifetime, iface, obj);
+                                    }
                                 }
                             });
                         }
@@ -239,18 +228,18 @@ namespace Microsoft.Extensions.DependencyInjection
 
                         var type = b;
                         if (b.GetInterfaces().Any())
-                            type = b.GetInterfaces().First();
-
-                        serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == type));
-
-                        if (serviceLifetime == ServiceLifetime.Scoped)
-                            serviceCollection.AddScoped(type, s => { return obj; });
-
-                        if (serviceLifetime == ServiceLifetime.Transient)
-                            serviceCollection.AddTransient(type, s => { return obj; });
-
-                        if (serviceLifetime == ServiceLifetime.Singleton)
-                            serviceCollection.AddSingleton(type, s => { return obj; });
+                        {
+                            foreach (var iface in type.GetInterfaces())
+                            {
+                                serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == iface));
+                                serviceCollection.AddService(serviceLifetime, iface, obj);
+                            }
+                        }
+                        else
+                        {
+                            serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == type));
+                            serviceCollection.AddService(serviceLifetime, type, obj);
+                        }
                     });
                 }
                 catch (Exception ex)
@@ -310,18 +299,18 @@ namespace Microsoft.Extensions.DependencyInjection
                         {
                             var type = b.MakeGenericType(new Type[1] { m });
                             if (b.GetInterfaces().Any())
-                                type = type.GetInterfaces().First();
-
-                            serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == type));
-
-                            if (serviceLifetime == ServiceLifetime.Scoped)
-                                serviceCollection.AddScoped(type, s => { return obj; });
-
-                            if (serviceLifetime == ServiceLifetime.Transient)
-                                serviceCollection.AddTransient(type, s => { return obj; });
-
-                            if (serviceLifetime == ServiceLifetime.Singleton)
-                                serviceCollection.AddSingleton(type, s => { return obj; });
+                            {
+                                foreach (var iface in type.GetInterfaces())
+                                {
+                                    serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == iface));
+                                    serviceCollection.AddService(serviceLifetime, iface, obj);
+                                }
+                            }
+                            else
+                            {
+                                serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == type));
+                                serviceCollection.AddService(serviceLifetime, type, obj);
+                            }
                         });
                     });
                 }
@@ -526,6 +515,18 @@ namespace Microsoft.Extensions.DependencyInjection
             });
 
             return list;
+        }
+
+        private static void AddService(this IServiceCollection serviceCollection, ServiceLifetime serviceLifetime,Type iface,object obj)
+        {
+            if (serviceLifetime == ServiceLifetime.Scoped)
+                serviceCollection.AddScoped(iface, s => { return obj; });
+
+            if (serviceLifetime == ServiceLifetime.Transient)
+                serviceCollection.AddTransient(iface, s => { return obj; });
+
+            if (serviceLifetime == ServiceLifetime.Singleton)
+                serviceCollection.AddSingleton(iface, s => { return obj; });
         }
     }
 }
