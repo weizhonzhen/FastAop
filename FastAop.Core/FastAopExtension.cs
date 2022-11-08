@@ -221,22 +221,23 @@ namespace Microsoft.Extensions.DependencyInjection
                         if (b.IsInterface)
                             return;
 
-                        var obj = Instance(b, isFastAopCall);
-
-                        if (obj == null)
-                            return;
-
                         var type = b;
                         if (b.GetInterfaces().Any())
                         {
                             foreach (var iface in type.GetInterfaces())
                             {
+                                var obj = Instance(b, iface, isFastAopCall);
+                                if (obj == null)
+                                    return;
                                 serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == iface));
                                 serviceCollection.AddService(serviceLifetime, iface, obj);
                             }
                         }
                         else
                         {
+                            var obj = Instance(b, null, isFastAopCall);
+                            if (obj == null)
+                                return;
                             serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == type));
                             serviceCollection.AddService(serviceLifetime, type, obj);
                         }
@@ -331,7 +332,7 @@ namespace Microsoft.Extensions.DependencyInjection
             return serviceCollection;
         }
 
-        private static object Instance(Type b, bool isFastAopCall)
+        private static object Instance(Type b,Type iface, bool isFastAopCall)
         {
             object obj = null, temp = null;
             foreach (var item in b.GetRuntimeFields())
@@ -360,7 +361,7 @@ namespace Microsoft.Extensions.DependencyInjection
                     obj = serviceProvider.GetService(b);
 
                 if (b.GetInterfaces().Any() && obj == null)
-                    obj = serviceProvider.GetService(b.GetInterfaces().First());
+                    obj = serviceProvider.GetService(iface);
 
                 if (obj == null)
                     continue;
@@ -383,9 +384,14 @@ namespace Microsoft.Extensions.DependencyInjection
                         throw new Exception($"{b.Name} field {item} is system type not support");
 
                     if (param.FieldType.IsInterface)
-                        Instance(serviceProvider.GetService(param.FieldType).GetType(), isFastAopCall);
+                        Instance(serviceProvider.GetService(param.FieldType).GetType(), iface, isFastAopCall);
                     else if (param.FieldType.GetInterfaces().Any())
-                        Instance(serviceProvider.GetService(param.FieldType.GetInterfaces().First()).GetType(), isFastAopCall);
+                    {
+                        foreach (var iType in param.FieldType.GetInterfaces())
+                        {
+                            Instance(serviceProvider.GetService(iType).GetType(),iType, isFastAopCall);
+                        }
+                    }
                 }
 
                 if (!item.FieldType.IsInterface && !item.FieldType.GetInterfaces().Any())
