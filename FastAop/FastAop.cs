@@ -26,8 +26,9 @@ namespace FastAop
         internal static ConcurrentDictionary<Type, object> ServiceInstance = new ConcurrentDictionary<Type, object>();
         internal static ConcurrentDictionary<Type, Type> ServiceAopType = new ConcurrentDictionary<Type, Type>();
         internal static ConcurrentDictionary<Type, Type> ServiceType = new ConcurrentDictionary<Type, Type>();
+        internal static ConcurrentDictionary<Type, ServiceLifetime> ServiceTime = new ConcurrentDictionary<Type, ServiceLifetime>();
 
-        public static void Init(string nameSpaceService, WebType webType, Type aopType = null)
+        public static void Init(string nameSpaceService, WebType webType, Type aopType = null, ServiceLifetime lifetime=ServiceLifetime.Scoped)
         {
             if (string.IsNullOrEmpty(nameSpaceService))
                 return;
@@ -75,14 +76,21 @@ namespace FastAop
                         interfaceType = b;
                         if (!b.IsInterface && b.GetInterfaces().Any())
                         {
-                            interfaceType = b.GetInterfaces().First();
-                            ServiceInstance.SetValue(interfaceType, Instance(b, interfaceType, aopType));
+                            foreach (var iface in b.GetInterfaces())
+                            {
+                                ServiceAopType.SetValue(iface, aopType);
+                                ServiceTime.SetValue(iface, lifetime);
+                                ServiceInstance.SetValue(iface, Instance(b, iface, aopType));
+                                ServiceType.SetValue(iface, b);
+                            }
                         }
                         else if (!b.IsInterface && !b.GetInterfaces().Any())
+                        {
                             Dic.SetValueDyn(b, FastAopDyn.Instance(b, aopType));
-
-                        ServiceAopType.SetValue(interfaceType, aopType);
-                        ServiceType.SetValue(interfaceType, b);
+                            ServiceTime.SetValue(b, lifetime);
+                            ServiceAopType.SetValue(interfaceType, aopType);
+                            ServiceType.SetValue(interfaceType, b);
+                        }
                     });
                 }
                 catch (Exception ex)
@@ -92,7 +100,7 @@ namespace FastAop
                 }
             });
 
-            InitAutowired(nameSpaceService, aopType);
+            InitAutowired(nameSpaceService, aopType, lifetime);
 
             if (webType == WebType.WebForm)
                 return;
@@ -110,7 +118,7 @@ namespace FastAop
             }
         }
 
-        public static void InitGeneric(string nameSpaceService, string nameSpaceModel, WebType webType, Type aopType = null)
+        public static void InitGeneric(string nameSpaceService, string nameSpaceModel, WebType webType, Type aopType = null, ServiceLifetime lifetime = ServiceLifetime.Scoped)
         {
             if (aopType != null && aopType.BaseType != typeof(FastAopAttribute))
                 throw new Exception($"aopType class not is FastAopAttribute,class name:{aopType.Name}");
@@ -132,7 +140,6 @@ namespace FastAop
                     return;
                 try
                 {
-                    Type interfaceType, sType;
                     assembly.ExportedTypes.Where(a => a.Namespace != null && a.Namespace.Contains(nameSpaceService)).ToList().ForEach(b =>
                     {
                         if (b.IsAbstract && b.IsSealed)
@@ -165,11 +172,15 @@ namespace FastAop
 
                                 if (!b.IsInterface && b.GetInterfaces().Any())
                                 {
-                                    sType = b.MakeGenericType(new Type[1] { m });
-                                    interfaceType = sType.GetInterfaces().First();
-                                    ServiceInstance.SetValue(interfaceType, FastAop.Instance(sType, interfaceType, aopType));
-                                    ServiceAopType.SetValue(interfaceType, aopType);
-                                    ServiceType.SetValue(interfaceType, sType);
+                                   var sType = b.MakeGenericType(new Type[1] { m });
+
+                                    foreach(var iface in sType.GetInterfaces())
+                                    {
+                                        ServiceInstance.SetValue(iface, FastAop.Instance(sType, iface, aopType));
+                                        ServiceAopType.SetValue(iface, aopType);
+                                        ServiceType.SetValue(iface, sType);
+                                        ServiceTime.SetValue(iface, lifetime);
+                                    }
                                 }
                             });
                         }
@@ -182,7 +193,7 @@ namespace FastAop
                 }
             });
 
-            InitAutowiredGeneric(nameSpaceModel, webType, aopType);
+            InitAutowiredGeneric(nameSpaceModel, webType, lifetime, aopType);
 
             if (webType == WebType.WebForm)
                 return;
@@ -200,7 +211,7 @@ namespace FastAop
             }
         }
 
-        private static void InitAutowired(string nameSpaceService, Type aopType = null)
+        private static void InitAutowired(string nameSpaceService, Type aopType = null, ServiceLifetime lifetime = ServiceLifetime.Scoped)
         {
             Type interfaceType;
             AppDomain.CurrentDomain.GetAssemblies().ToList().ForEach(assembly =>
@@ -220,22 +231,34 @@ namespace FastAop
                        if (b.IsInterface)
                            return;
 
-                       var obj = Instance(b);
-
-                       if (obj == null)
-                           return;
-
                        interfaceType = b;
                        if (b.GetInterfaces().Any())
                        {
-                           interfaceType = b.GetInterfaces().First();
-                           ServiceInstance.SetValue(interfaceType, obj);
+                           foreach (var iface in b.GetInterfaces())
+                           {
+                               var obj = Instance(b,iface, lifetime);
+
+                               if (obj == null)
+                                   return;
+
+                               ServiceAopType.SetValue(iface, aopType);
+                               ServiceType.SetValue(iface, b);
+                               ServiceInstance.SetValue(iface, obj);
+                               ServiceTime.SetValue(iface, lifetime);
+                           }
                        }
                        else
-                           Dic.SetValueDyn(b, obj);
+                       {
+                           var obj = Instance(b, null, lifetime);
 
-                       ServiceAopType.SetValue(interfaceType, aopType);
-                       ServiceType.SetValue(interfaceType, b);
+                           if (obj == null)
+                               return;
+
+                           Dic.SetValueDyn(b, obj);
+                           ServiceAopType.SetValue(interfaceType, aopType);
+                           ServiceType.SetValue(interfaceType, b);
+                           ServiceTime.SetValue(interfaceType, lifetime);
+                       }
                    });
                }
                catch (Exception ex)
@@ -246,7 +269,7 @@ namespace FastAop
            });
         }
 
-        private static object Instance(Type b)
+        private static object Instance(Type b, Type iface, ServiceLifetime lifetime = ServiceLifetime.Scoped)
         {
             object obj = null, temp = null;
             foreach (var item in b.GetRuntimeFields())
@@ -266,7 +289,7 @@ namespace FastAop
                     obj = ServiceInstance.GetValue(b);
 
                 if (b.GetInterfaces().Any() && obj == null)
-                    obj = ServiceInstance.GetValue(b.GetInterfaces().First());
+                    obj = ServiceInstance.GetValue(iface);
 
                 if (obj == null)
                     continue;
@@ -289,17 +312,22 @@ namespace FastAop
                         throw new AopException($"{b.Name} field {item} is system type not support");
 
                     if (param.FieldType.IsInterface)
-                        Instance(ServiceInstance.GetValue(param.FieldType).GetType());
+                        Instance(ServiceInstance.GetValue(param.FieldType).GetType(),iface,lifetime);
                     else if (param.FieldType.GetInterfaces().Any())
-                        Instance(ServiceInstance.GetValue(param.FieldType.GetInterfaces().First()).GetType());
+                    {
+                        foreach(var iType in param.FieldType.GetInterfaces())
+                        {
+                            Instance(ServiceInstance.GetValue(iType).GetType(), iType,lifetime);
+                        }
+                    }
                     else
-                        Instance(Dic.GetValueDyn(param.FieldType).GetType());
+                        Instance(Dic.GetValueDyn(param.FieldType).GetType(),iface);
                 }
 
                 if (item.FieldType.IsInterface)
                     item.SetValueDirect(__makeref(temp), ServiceInstance.GetValue(item.FieldType));
                 else if (item.FieldType.GetInterfaces().Any())
-                    item.SetValueDirect(__makeref(temp), ServiceInstance.GetValue(item.FieldType.GetInterfaces().First()));
+                    item.SetValueDirect(__makeref(temp), ServiceInstance.GetValue(iface));
                 else
                     item.SetValue(temp, Dic.GetValueDyn(item.FieldType));
 
@@ -316,7 +344,7 @@ namespace FastAop
             return obj;
         }
 
-        private static void InitAutowiredGeneric(string nameSpaceModel, WebType webType, Type aopType = null)
+        private static void InitAutowiredGeneric(string nameSpaceModel, WebType webType, ServiceLifetime lifetime, Type aopType = null)
         {
             var list = InitModelType(nameSpaceModel);
 
@@ -389,14 +417,21 @@ namespace FastAop
                             var interfaceType = sType;
                             if (b.GetInterfaces().Any())
                             {
-                                interfaceType = b.GetInterfaces().First();
-                                ServiceInstance.SetValue(interfaceType, obj);
+                                foreach(var iface in sType.GetInterfaces())
+                                {
+                                    ServiceInstance.SetValue(iface, obj);
+                                    ServiceAopType.SetValue(iface, aopType);
+                                    ServiceType.SetValue(iface, b);
+                                    ServiceTime.SetValue(iface, lifetime);
+                                }
                             }
                             else
+                            {
                                 Dic.SetValueDyn(interfaceType, obj);
-
-                            ServiceAopType.SetValue(interfaceType, aopType);
-                            ServiceType.SetValue(interfaceType, b);
+                                ServiceAopType.SetValue(interfaceType, aopType);
+                                ServiceType.SetValue(interfaceType, b);
+                                ServiceTime.SetValue(interfaceType, lifetime);
+                            }
                         });
                     });
                 }
@@ -408,7 +443,7 @@ namespace FastAop
             });
         }
 
-        private static object InstanceGeneric(List<Type> list, Type b, WebType webType)
+        private static object InstanceGeneric(List<Type> list, Type b, WebType webType, ServiceLifetime lifetime)
         {
             object obj = null, temp = null;
             foreach (var item in b.GetRuntimeFields())
@@ -462,9 +497,9 @@ namespace FastAop
                             throw new AopException($"{type.Name} field {item} is system type not support");
 
                         if (param.FieldType.IsInterface)
-                            InstanceGeneric(list, ServiceInstance.GetValue(param.FieldType).GetType(), webType);
+                            InstanceGeneric(list, ServiceInstance.GetValue(param.FieldType).GetType(), webType,lifetime);
                         else if (param.FieldType.GetInterfaces().Any())
-                            InstanceGeneric(list, ServiceInstance.GetValue(param.FieldType.GetInterfaces().First()).GetType(), webType);
+                            InstanceGeneric(list, ServiceInstance.GetValue(param.FieldType.GetInterfaces().First()).GetType(), webType,lifetime);
                     }
 
                     var newItem = temp.GetType().GetRuntimeFields().ToList().Find(a => a.FieldType == item.FieldType && a.Name == item.Name);
@@ -890,6 +925,13 @@ namespace FastAop
             dynIL.Emit(OpCodes.Newobj, builder.CreateType().GetConstructor(arryType));
             dynIL.Emit(OpCodes.Ret);
             return dynMethod;
+        }
+
+        public enum ServiceLifetime
+        {
+            Singleton,
+            Scoped,
+            Transient
         }
     }
 }
