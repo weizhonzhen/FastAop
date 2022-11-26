@@ -1,5 +1,4 @@
 ﻿using FastAop.Constructor;
-using FastAop.Result;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -15,7 +14,13 @@ namespace FastAop.Factory
         private ConcurrentDictionary<Type, List<FieldInfo>> cache = new ConcurrentDictionary<Type, List<FieldInfo>>();
         private HttpApplication application;
 
-        public void Dispose() { }
+        public void Dispose() 
+        {
+            FastAop.ServiceInstance = null;
+            FastAop.ServiceAopType = null;
+            FastAop.ServiceInstance = null;
+            FastAop.ServiceTime = null;
+        }
 
         public void Init(HttpApplication _application)
         {
@@ -23,11 +28,38 @@ namespace FastAop.Factory
                 throw new ArgumentNullException(nameof(_application));
 
             application = _application;
-            application.PreRequestHandlerExecute += PreRequestHandlerExecute;
+            application.BeginRequest += Application_BeginRequest;
+            application.EndRequest += Application_EndRequest;
         }
 
-        private void PreRequestHandlerExecute(object sender, EventArgs e)
+        private void Application_EndRequest(object sender, EventArgs e)
         {
+            FastAop.ServiceTime.ToList().ForEach(time =>
+            {
+                if (time.Value == FastAop.ServiceLifetime.Scoped)
+                {
+                    FastAop.ServiceInstance.TryRemove(time.Key, out var instance);
+                }
+            });
+        }
+
+        private void Application_BeginRequest(object sender, EventArgs e)
+        {
+            FastAop.ServiceTime.ToList().ForEach(time =>
+            {
+                if (time.Value == FastAop.ServiceLifetime.Scoped)
+                {
+                    var aopType = FastAop.ServiceAopType.GetValue(time.Key);
+                    var serviceType = FastAop.ServiceType.GetValue(time.Key);
+
+                    if (serviceType != null && time.Key.IsInterface && FastAop.ServiceInstance.GetValue(time.Key) == null)
+                        FastAop.ServiceInstance.SetValue(time.Key, FastAop.Instance(serviceType, time.Key, aopType));
+
+                    if (serviceType != null && !time.Key.IsInterface && Dic.GetValueDyn(time.Key) == null)
+                        Dic.SetValueDyn(serviceType, FastAopDyn.Instance(serviceType, aopType));
+                }
+            });
+
             var list = new List<FieldInfo>();
             var page = application.Context.CurrentHandler as Page;
 
@@ -43,7 +75,7 @@ namespace FastAop.Factory
                 cache.TryAdd(type, list);
             }
 
-            foreach(var item in  list)
+            foreach (var item in list)
             {
                 if (item.GetCustomAttribute<Autowired>() == null)
                     continue;
@@ -56,7 +88,7 @@ namespace FastAop.Factory
 
                 if (item.FieldType.IsInterface)
                     item.SetValueDirect(__makeref(page), FastAop.ServiceInstance.GetValue(item.FieldType));
-                else if (item.FieldType.GetInterfaces().Any()) 
+                else if (item.FieldType.GetInterfaces().Any())
                     item.SetValueDirect(__makeref(page), FastAop.ServiceInstance.GetValue(item.FieldType.GetInterfaces().First()));
                 else
                     item.SetValue(page, Dic.GetValueDyn(item.FieldType));
