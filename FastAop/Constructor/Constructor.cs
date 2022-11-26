@@ -117,6 +117,8 @@ namespace FastAop.Constructor
 namespace System.Collections.Concurrent
 {
     using FastAop;
+    using static FastAop.FastAop;
+
     internal static class Dic
     {
         internal static object GetValue(this ConcurrentDictionary<Type, object> item, Type key)
@@ -132,13 +134,13 @@ namespace System.Collections.Concurrent
             if (item.Keys.ToList().Exists(a => a == key))
             {
                 obj = item[key];
-                var aopType = FastAop.ServiceAopType.GetValue(key);
-                var serviceType = FastAop.ServiceType.GetValue(key);
+                var aopType = ServiceAopType.GetValue(key);
+                var serviceType = ServiceType.GetValue(key);
 
-                if (obj == null)
+                if (obj == null || ServiceTime.GetValue(key) == ServiceLifetime.Transient)
                 {
-                    obj = FastAop.Instance(serviceType, key, aopType);
-                    FastAop.ServiceInstance.SetValue(key, obj);
+                    obj = Instance(serviceType, key, aopType);
+                    ServiceInstance.SetValue(key, obj);
                 }
 
                 return obj;
@@ -163,7 +165,6 @@ namespace System.Collections.Concurrent
             return item;
         }
 
-
         internal static Type GetValue(this ConcurrentDictionary<Type, Type> item, Type key)
         {
             if (key == null)
@@ -180,7 +181,39 @@ namespace System.Collections.Concurrent
                 return null;
         }
 
+        internal static ServiceLifetime GetValue(this ConcurrentDictionary<Type, ServiceLifetime> item, Type key)
+        {
+            if (key == null)
+                return ServiceLifetime.Scoped;
+
+            if (item == null)
+                return ServiceLifetime.Scoped;
+
+            key = item.Keys.ToList().Find(a => a == key);
+
+            if (item.Keys.ToList().Exists(a => a == key))
+                return item[key];
+            else
+                return ServiceLifetime.Scoped;
+        }
+
         internal static ConcurrentDictionary<Type, Type> SetValue(this ConcurrentDictionary<Type, Type> item, Type key, Type value)
+        {
+            if (key == null)
+                return null;
+
+            if (item == null)
+                return null;
+
+            if (item.Keys.ToList().Exists(a => a == key))
+                item[key] = value;
+            else
+                item.TryAdd(key, value);
+
+            return item;
+        }
+
+        internal static ConcurrentDictionary<Type, ServiceLifetime> SetValue(this ConcurrentDictionary<Type, ServiceLifetime> item, Type key, ServiceLifetime value)
         {
             if (key == null)
                 return null;
@@ -209,10 +242,10 @@ namespace System.Collections.Concurrent
             {
                 obj = FastAopDyn.ServiceInstance[key];
 
-                var aopType = FastAop.ServiceAopType.GetValue(key);
-                var serviceType = FastAop.ServiceType.GetValue(key);
+                var aopType = ServiceAopType.GetValue(key);
+                var serviceType = ServiceType.GetValue(key);
 
-                if (obj == null)
+                if (obj == null || ServiceTime.GetValue(key) == ServiceLifetime.Transient)
                 {
                     obj = FastAopDyn.Instance(serviceType, aopType);
                     FastAopDyn.ServiceInstance.SetValue(key, obj);
