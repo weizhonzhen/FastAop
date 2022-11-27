@@ -14,13 +14,7 @@ namespace FastAop.Factory
         private ConcurrentDictionary<Type, List<FieldInfo>> cache = new ConcurrentDictionary<Type, List<FieldInfo>>();
         private HttpApplication application;
 
-        public void Dispose() 
-        {
-            FastAop.ServiceInstance = null;
-            FastAop.ServiceAopType = null;
-            FastAop.ServiceInstance = null;
-            FastAop.ServiceTime = null;
-        }
+        public void Dispose() { }
 
         public void Init(HttpApplication _application)
         {
@@ -36,7 +30,7 @@ namespace FastAop.Factory
         {
             FastAop.ServiceTime.ToList().ForEach(time =>
             {
-                if (time.Value == FastAop.ServiceLifetime.Scoped)
+                if (time.Value == ServiceLifetime.Scoped)
                 {
                     FastAop.ServiceInstance.TryRemove(time.Key, out var instance);
                 }
@@ -47,16 +41,21 @@ namespace FastAop.Factory
         {
             FastAop.ServiceTime.ToList().ForEach(time =>
             {
-                if (time.Value == FastAop.ServiceLifetime.Scoped)
+                if (time.Value == ServiceLifetime.Scoped)
                 {
                     var aopType = FastAop.ServiceAopType.GetValue(time.Key);
                     var serviceType = FastAop.ServiceType.GetValue(time.Key);
 
-                    if (serviceType != null && time.Key.IsInterface && FastAop.ServiceInstance.GetValue(time.Key) == null)
-                        FastAop.ServiceInstance.SetValue(time.Key, FastAop.Instance(serviceType, time.Key, aopType));
+                    if (FastAop.ServiceNoAop.GetValue(time.Key) == null)
+                    {
+                        if (serviceType != null && time.Key.IsInterface && FastAop.ServiceInstance.GetValue(time.Key) == null)
+                            FastAop.ServiceInstance.SetValue(time.Key, FastAop.Instance(serviceType, time.Key, aopType));
 
-                    if (serviceType != null && !time.Key.IsInterface && Dic.GetValueDyn(time.Key) == null)
-                        Dic.SetValueDyn(serviceType, FastAopDyn.Instance(serviceType, aopType));
+                        if (serviceType != null && !time.Key.IsInterface && Dic.GetValueDyn(time.Key) == null)
+                            Dic.SetValueDyn(serviceType, FastAopDyn.Instance(serviceType, aopType));
+                    }
+                    else
+                        FastAop.ServiceInstance.SetValue(time.Key, Activator.CreateInstance(serviceType));
                 }
             });
 
