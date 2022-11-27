@@ -332,6 +332,54 @@ namespace Microsoft.Extensions.DependencyInjection
             return serviceCollection;
         }
 
+        public static IServiceCollection AddFastAopScoped<S,I>(this IServiceCollection serviceCollection, Type aopType = null)
+        {
+            var serviceType = typeof(S);
+            var interfaceType = typeof(I);
+            if (aopType != null && aopType.BaseType != typeof(FastAopAttribute))
+                throw new Exception($"aopType class not is FastAopAttribute,class name:{aopType.Name}");
+
+            if (!serviceType.GetInterfaces().ToList().Exists(a => a == interfaceType))
+                throw new Exception($"serviceType:{serviceType.Name}, getInterfaces class not have Interfaces class:{interfaceType.Name}");
+
+            var obj = FastAop.Core.FastAop.Instance(serviceType, interfaceType, aopType);
+            serviceCollection.AddScoped(interfaceType, s => { return obj; });
+
+            return serviceCollection;
+        }
+
+        public static IServiceCollection AddFastAopSingleton<S, I>(this IServiceCollection serviceCollection, Type aopType = null)
+        {
+            var serviceType = typeof(S);
+            var interfaceType = typeof(I);
+            if (aopType != null && aopType.BaseType != typeof(FastAopAttribute))
+                throw new Exception($"aopType class not is FastAopAttribute,class name:{aopType.Name}");
+
+            if (!serviceType.GetInterfaces().ToList().Exists(a => a == interfaceType))
+                throw new Exception($"serviceType:{serviceType.Name}, getInterfaces class not have Interfaces class:{interfaceType.Name}");
+
+            var obj = FastAop.Core.FastAop.Instance(serviceType, interfaceType, aopType);
+            serviceCollection.AddScoped(interfaceType, s => { return obj; });
+
+            return serviceCollection;
+        }
+
+        public static IServiceCollection AddFastAopTransient<S, I>(this IServiceCollection serviceCollection, Type aopType = null)
+        {
+            var serviceType = typeof(S);
+            var interfaceType = typeof(I);
+            if (aopType != null && aopType.BaseType != typeof(FastAopAttribute))
+                throw new Exception($"aopType class not is FastAopAttribute,class name:{aopType.Name}");
+
+            if (!serviceType.GetInterfaces().ToList().Exists(a => a == interfaceType))
+                throw new Exception($"serviceType:{serviceType.Name}, getInterfaces class not have Interfaces class:{interfaceType.Name}");
+
+            var obj = FastAop.Core.FastAop.Instance(serviceType, interfaceType, aopType);
+            serviceCollection.AddScoped(interfaceType, s => { return obj; });
+
+            return serviceCollection;
+        }
+
         private static object Instance(Type b,Type iface, bool isFastAopCall)
         {
             object obj = null, temp = null;
