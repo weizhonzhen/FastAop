@@ -103,7 +103,7 @@ namespace FastAop.Core.Constructor
                     else if (FastAopExtension.serviceProvider.GetService(p.ParameterType) == null && p.ParameterType.IsInterface && p.ParameterType.IsGenericType)
                         throw new Exception($"AddFastAopGeneric Method，{serviceType.FullName} Constructor have Parameter Generic Type");
                     else if (FastAopExtension.serviceProvider.GetService(p.ParameterType) == null && p.ParameterType.IsInterface)
-                        throw new Exception($"can't find {p.ParameterType.Name} Instance class");
+                        throw new Exception($"can't find {p.ParameterType.Name} Instance class or {p.ParameterType.Name} add ioc in AddFastAop before");
                     else if (p.ParameterType.IsInterface)
                         model.dynParam.Add(FastAopExtension.serviceProvider.GetService(p.ParameterType));
                 });
