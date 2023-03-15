@@ -18,7 +18,7 @@ namespace FastAop.Constructor
             if (!paramType.IsInterface && paramType.GetInterfaces().Any())
             {
                 var interfaceType = paramType.GetInterfaces().First();
-                FastAop.ServiceInstance.SetValue(interfaceType, FastAop.Instance(paramType, interfaceType));
+                FastAop.ServiceInstance.SetValue(interfaceType, FastAop.Instance(paramType, interfaceType,aopType));
                 FastAop.ServiceAopType.SetValue(interfaceType, aopType);
                 FastAop.ServiceType.SetValue(interfaceType, paramType);
                 return;
