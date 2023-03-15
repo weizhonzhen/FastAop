@@ -22,43 +22,13 @@ namespace FastAop.Factory
                 throw new ArgumentNullException(nameof(_application));
 
             application = _application;
+            application.PreRequestHandlerExecute += Application_PreRequestHandlerExecute;
             application.BeginRequest += Application_BeginRequest;
             application.EndRequest += Application_EndRequest;
         }
 
-        private void Application_EndRequest(object sender, EventArgs e)
+        private void Application_PreRequestHandlerExecute(object sender, EventArgs e)
         {
-            FastAop.ServiceTime.ToList().ForEach(time =>
-            {
-                if (time.Value == ServiceLifetime.Scoped)
-                {
-                    FastAop.ServiceInstance.TryRemove(time.Key, out var instance);
-                }
-            });
-        }
-
-        private void Application_BeginRequest(object sender, EventArgs e)
-        {
-            FastAop.ServiceTime.ToList().ForEach(time =>
-            {
-                if (time.Value == ServiceLifetime.Scoped)
-                {
-                    var aopType = FastAop.ServiceAopType.GetValue(time.Key);
-                    var serviceType = FastAop.ServiceType.GetValue(time.Key);
-
-                    if (FastAop.ServiceNoAop.GetValue(time.Key) == null)
-                    {
-                        if (serviceType != null && time.Key.IsInterface && FastAop.ServiceInstance.GetValue(time.Key) == null)
-                            FastAop.ServiceInstance.SetValue(time.Key, FastAop.Instance(serviceType, time.Key, aopType));
-
-                        if (serviceType != null && !time.Key.IsInterface && Dic.GetValueDyn(time.Key) == null)
-                            Dic.SetValueDyn(serviceType, FastAopDyn.Instance(serviceType, aopType));
-                    }
-                    else
-                        FastAop.ServiceInstance.SetValue(time.Key, Activator.CreateInstance(serviceType));
-                }
-            });
-
             var list = new List<FieldInfo>();
             var page = application.Context.CurrentHandler as Page;
 
@@ -92,6 +62,43 @@ namespace FastAop.Factory
                 else
                     item.SetValue(page, Dic.GetValueDyn(item.FieldType));
             }
+        }
+
+        private void Application_EndRequest(object sender, EventArgs e)
+        {
+            FastAop.ServiceTime.ToList().ForEach(time =>
+            {
+                if (time.Value == ServiceLifetime.Scoped)
+                {
+                    FastAop.ServiceInstance.TryRemove(time.Key, out var instance);
+                }
+            });
+        }
+
+        private void Application_BeginRequest(object sender, EventArgs e)
+        {
+            FastAop.ServiceTime.ToList().ForEach(time =>
+            {
+                if (time.Value == ServiceLifetime.Scoped)
+                {
+                    var aopType = FastAop.ServiceAopType.GetValue(time.Key);
+                    var serviceType = FastAop.ServiceType.GetValue(time.Key);
+
+                    if (FastAop.ServiceNoAop.GetValue(time.Key) == null)
+                    {
+                        if (serviceType != null && time.Key.IsInterface && FastAop.ServiceInstance.GetValue(time.Key) == null)
+                        {
+                            var obj = FastAop.Instance(serviceType, time.Key, time.Value,true);
+                            FastAop.ServiceInstance.SetValue(time.Key, obj);
+                        }
+
+                        if (serviceType != null && !time.Key.IsInterface && Dic.GetValueDyn(time.Key) == null)
+                            Dic.SetValueDyn(serviceType, FastAopDyn.Instance(serviceType, aopType));
+                    }
+                    else
+                        FastAop.ServiceInstance.SetValue(time.Key, Activator.CreateInstance(serviceType));
+                }
+            });
         }
     }
 }
