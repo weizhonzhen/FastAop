@@ -5,7 +5,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
+using System.Security.AccessControl;
 
 namespace FastAop
 {
@@ -75,8 +75,8 @@ namespace FastAop
                         }
                         else if (!b.IsInterface && !b.GetInterfaces().Any())
                         {
-                            Dic.SetValueDyn(b, FastAopDyn.Instance(b, aopType));
-                            ServiceTime.SetValue(b, lifetime);
+                            Dic.SetValueDyn(interfaceType, FastAopDyn.Instance(b, aopType));
+                            ServiceTime.SetValue(interfaceType, lifetime);
                             ServiceAopType.SetValue(interfaceType, aopType);
                             ServiceType.SetValue(interfaceType, b);
                         }
@@ -258,7 +258,7 @@ namespace FastAop
             });
         }
 
-        private static object Instance(Type b, Type iface, ServiceLifetime lifetime = ServiceLifetime.Scoped)
+        internal static object Instance(Type b, Type iface, ServiceLifetime lifetime = ServiceLifetime.Scoped,bool isReInstance=false)
         {
             object obj = null, temp = null;
             foreach (var item in b.GetRuntimeFields())
@@ -280,8 +280,11 @@ namespace FastAop
                 if (b.GetInterfaces().Any() && obj == null)
                     obj = ServiceInstance.GetValue(iface);
 
-                if (obj == null)
+                if (obj == null && !isReInstance)
                     continue;
+
+                if(obj ==null && isReInstance)
+                    obj= Instance(b, iface, FastAop.ServiceAopType.GetValue(iface));
 
                 if (temp == null)
                 {
@@ -301,16 +304,23 @@ namespace FastAop
                         throw new AopException($"{b.Name} field {item} is system type not support");
 
                     if (param.FieldType.IsInterface)
-                        Instance(ServiceInstance.GetValue(param.FieldType).GetType(), iface, lifetime);
+                    {
+                        var fieldType = isReInstance ? ServiceType.GetValue(param.FieldType) : ServiceInstance.GetValue(param.FieldType).GetType();
+                        Instance(fieldType, param.FieldType, lifetime, isReInstance);
+                    }
                     else if (param.FieldType.GetInterfaces().Any())
                     {
                         foreach (var iType in param.FieldType.GetInterfaces())
                         {
-                            Instance(ServiceInstance.GetValue(iType).GetType(), iType, lifetime);
+                            var fieldType = isReInstance ? ServiceType.GetValue(iType) : ServiceInstance.GetValue(iType).GetType();
+                            Instance(fieldType, iType, lifetime, isReInstance);
                         }
                     }
                     else
-                        Instance(Dic.GetValueDyn(param.FieldType).GetType(), iface);
+                    {
+                        var fieldType = isReInstance ? ServiceType.GetValue(param.FieldType) : Dic.GetValueDyn(param.FieldType).GetType();
+                        Instance(fieldType, iface, lifetime, isReInstance);
+                    }
                 }
 
                 if (item.FieldType.IsInterface)
@@ -410,7 +420,7 @@ namespace FastAop
                                 {
                                     ServiceInstance.SetValue(iface, obj);
                                     ServiceAopType.SetValue(iface, aopType);
-                                    ServiceType.SetValue(iface, b);
+                                    ServiceType.SetValue(iface, sType);
                                     ServiceTime.SetValue(iface, lifetime);
                                 }
                             }
@@ -500,7 +510,6 @@ namespace FastAop
                         newItem.SetValue(temp, Dic.GetValueDyn(item.FieldType));
 
                     obj.GetType().GetRuntimeFields().First().SetValueDirect(__makeref(obj), temp);
-
                 });
             }
 
