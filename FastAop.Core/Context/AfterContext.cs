@@ -33,7 +33,7 @@ namespace FastAop.Core.Context
             }
             set
             {
-                if (ResultType == typeof(void))
+                if (Method.ReturnType == typeof(void))
                     return;
 
                 _Result = BaseResult.SetResult(this, value);
@@ -68,14 +68,5 @@ namespace FastAop.Core.Context
         }
 
         public string[] AttributeName { get; set; }
-
-        public Type ResultType
-        {
-            get
-            {
-                return Method.ReturnType;
-            }
-            internal set { }
-        }
     }
 }
