@@ -123,12 +123,12 @@ namespace FastAop.Core.Result
 
         internal static object SetResult(ExceptionContext context, object value)
         {
-            return SetResult(context.IsTaskResult, value, context.isValueTaskResult, context.Method, context.ResultType, context.IsReturn, context.Method.Name);
+            return SetResult(context.IsTaskResult, value, context.isValueTaskResult, context.Method, context.Method.ReturnType, context.IsReturn, context.Method.Name);
         }
 
         internal static object GetResult(ExceptionContext context, object _Result)
         {
-            return GetResult(context.IsTaskResult, _Result, context.isValueTaskResult, context.ServiceType, context.Method, context.ResultType);
+            return GetResult(context.IsTaskResult, _Result, context.isValueTaskResult, context.ServiceType, context.Method, context.Method.ReturnType);
         }
 
         internal static object SetResult(AfterContext context, object value)
@@ -136,23 +136,23 @@ namespace FastAop.Core.Result
             if (!context.IsTaskResult && value is Task)
                 value = BaseResult.GetTaskResult(value);
 
-            if (value != null && !context.Method.IsGenericMethod && value.GetType() != context.ResultType)
-                throw new Exception($"ServiceName:{(context.Method.DeclaringType != null ? context.Method.DeclaringType.Name : context.Method.Name)},Method Name:{context.Method.Name},return Type:{context.ResultType.Name},but aop set result type :{value.GetType().Name}");
+            if (value != null && !context.Method.IsGenericMethod && value.GetType() != context.Method.ReturnType)
+                throw new Exception($"ServiceName:{(context.Method.DeclaringType != null ? context.Method.DeclaringType.Name : context.Method.Name)},Method Name:{context.Method.Name},return Type:{context.Method.ReturnType.Name},but aop set result type :{value.GetType().Name}");
 
             if (!context.IsTaskResult && !context.Method.IsGenericMethod)
-                return Convert.ChangeType(value, context.ResultType);
+                return Convert.ChangeType(value, context.Method.ReturnType);
             else
                 return value;
         }
 
         internal static object SetResult(BeforeContext context, object value)
         {
-            return SetResult(context.IsTaskResult, value, context.isValueTaskResult, context.Method, context.ResultType, context.IsReturn, context.Method.Name);
+            return SetResult(context.IsTaskResult, value, context.isValueTaskResult, context.Method, context.Method.ReturnType, context.IsReturn, context.Method.Name);
         }
 
         internal static object GetResult(BeforeContext context, object _Result)
         {
-            return GetResult(context.IsTaskResult, _Result, context.isValueTaskResult, context.ServiceType, context.Method, context.ResultType);
+            return GetResult(context.IsTaskResult, _Result, context.isValueTaskResult, context.ServiceType, context.Method, context.Method.ReturnType);
         }
 
         private static object SetResult(bool IsTaskResult, object value, bool isValueTaskResult, MethodInfo Method, Type ResultType, bool IsReturn, string MethodName)
