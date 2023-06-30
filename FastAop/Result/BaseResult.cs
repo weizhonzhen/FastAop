@@ -111,7 +111,7 @@ namespace FastAop.Result
 
         internal static object SetResult(ExceptionContext context, object value)
         {
-            return SetResult(context.IsTaskResult, value, context.Method, context.ResultType, context.IsReturn, context.MethodName);
+            return SetResult(context.IsTaskResult, value, context.Method, context.ResultType, context.IsReturn, context.Method.Name);
         }
 
         internal static object GetResult(ExceptionContext context, object _Result)
@@ -125,7 +125,7 @@ namespace FastAop.Result
                 value = BaseResult.GetTaskResult(value);
 
             if (value != null && !context.Method.IsGenericMethod && value.GetType() != context.ResultType)
-                throw new Exception($"ServiceName:{(context.Method.DeclaringType != null ? context.Method.DeclaringType.Name : context.MethodName)},Method Name:{context.MethodName},return Type:{context.ResultType.Name},but aop set result type :{value.GetType().Name}");
+                throw new Exception($"ServiceName:{(context.Method.DeclaringType != null ? context.Method.DeclaringType.Name : context.Method.Name)},Method Name:{context.Method.Name},return Type:{context.ResultType.Name},but aop set result type :{value.GetType().Name}");
 
             if (!context.IsTaskResult && !context.Method.IsGenericMethod)
                 return Convert.ChangeType(value, context.ResultType);
@@ -135,7 +135,7 @@ namespace FastAop.Result
 
         internal static object SetResult(BeforeContext context, object value)
         {
-            return SetResult(context.IsTaskResult, value, context.Method, context.ResultType, context.IsReturn, context.MethodName);
+            return SetResult(context.IsTaskResult, value, context.Method, context.ResultType, context.IsReturn, context.Method.Name);
         }
 
         internal static object GetResult(BeforeContext context, object _Result)
@@ -152,12 +152,12 @@ namespace FastAop.Result
                 throw new Exception($"ServiceName:{(Method.DeclaringType != null ? Method.DeclaringType.Name : MethodName)},Method Name:{MethodName},return Type:{ResultType.Name},but aop set result type :{value.GetType().Name}");
 
             if (!IsTaskResult && !Method.IsGenericMethod)
-               return Convert.ChangeType(value, ResultType);
+                return Convert.ChangeType(value, ResultType);
             else
-               return value;
+                return value;
         }
 
-        private static object GetResult(bool IsTaskResult, object _Result,string ServiceType, MethodInfo Method, Type ResultType)
+        private static object GetResult(bool IsTaskResult, object _Result, string ServiceType, MethodInfo Method, Type ResultType)
         {
             if (IsTaskResult && !(_Result is Task))
                 throw new Exception($"serviceName class name:{ServiceType},method name:{Method.Name}, return type is Task, but aop retrun type is {_Result.GetType().Name}");
