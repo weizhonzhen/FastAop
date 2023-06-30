@@ -123,7 +123,7 @@ namespace FastAop.Core.Result
 
         internal static object SetResult(ExceptionContext context, object value)
         {
-           return SetResult(context.IsTaskResult, value, context.isValueTaskResult, context.Method, context.ResultType, context.IsReturn, context.MethodName);
+            return SetResult(context.IsTaskResult, value, context.isValueTaskResult, context.Method, context.ResultType, context.IsReturn, context.Method.Name);
         }
 
         internal static object GetResult(ExceptionContext context, object _Result)
@@ -137,7 +137,7 @@ namespace FastAop.Core.Result
                 value = BaseResult.GetTaskResult(value);
 
             if (value != null && !context.Method.IsGenericMethod && value.GetType() != context.ResultType)
-                throw new Exception($"ServiceName:{(context.Method.DeclaringType != null ? context.Method.DeclaringType.Name : context.MethodName)},Method Name:{context.MethodName},return Type:{context.ResultType.Name},but aop set result type :{value.GetType().Name}");
+                throw new Exception($"ServiceName:{(context.Method.DeclaringType != null ? context.Method.DeclaringType.Name : context.Method.Name)},Method Name:{context.Method.Name},return Type:{context.ResultType.Name},but aop set result type :{value.GetType().Name}");
 
             if (!context.IsTaskResult && !context.Method.IsGenericMethod)
                 return Convert.ChangeType(value, context.ResultType);
@@ -147,7 +147,7 @@ namespace FastAop.Core.Result
 
         internal static object SetResult(BeforeContext context, object value)
         {
-            return SetResult(context.IsTaskResult, value, context.isValueTaskResult, context.Method, context.ResultType, context.IsReturn, context.MethodName);
+            return SetResult(context.IsTaskResult, value, context.isValueTaskResult, context.Method, context.ResultType, context.IsReturn, context.Method.Name);
         }
 
         internal static object GetResult(BeforeContext context, object _Result)
@@ -155,7 +155,7 @@ namespace FastAop.Core.Result
             return GetResult(context.IsTaskResult, _Result, context.isValueTaskResult, context.ServiceType, context.Method, context.ResultType);
         }
 
-        private static object SetResult(bool IsTaskResult,object value,bool isValueTaskResult,MethodInfo Method,Type ResultType,bool IsReturn,string MethodName)
+        private static object SetResult(bool IsTaskResult, object value, bool isValueTaskResult, MethodInfo Method, Type ResultType, bool IsReturn, string MethodName)
         {
             if (!IsTaskResult && value is Task)
                 value = GetTaskResult(value);
@@ -172,7 +172,7 @@ namespace FastAop.Core.Result
                 return value;
         }
 
-        private static object GetResult(bool IsTaskResult,object _Result,bool isValueTaskResult,string ServiceType,MethodInfo Method,Type ResultType)
+        private static object GetResult(bool IsTaskResult, object _Result, bool isValueTaskResult, string ServiceType, MethodInfo Method, Type ResultType)
         {
             if (IsTaskResult && !(_Result is Task) && !isValueTaskResult)
                 throw new Exception($"serviceName class name:{ServiceType},method name:{Method.Name}, return type is Task, but aop retrun type is {_Result.GetType().Name}");
