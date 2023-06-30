@@ -8,18 +8,18 @@ namespace FastAop.Core.Context
 {
     public class BeforeContext
     {
+        public string Id { get; set; }
+
         private object _Result = new object();
         public object[] Paramter { get; set; }
 
         public string ServiceType { get; set; }
 
-        public string MethodName { get; set; }
-
         public MethodInfo Method
         {
             get
             {
-                return string.IsNullOrEmpty(ServiceType) ? null : FastAopCache.GetType(ServiceType).GetMethod(MethodName);
+                return FastAopCache.Get(Id);
             }
             internal set { }
         }
