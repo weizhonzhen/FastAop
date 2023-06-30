@@ -1,4 +1,5 @@
-﻿using FastAop.Context;
+﻿using FastAop.Cache;
+using FastAop.Context;
 using FastAop.Model;
 using System;
 using System.Collections.Generic;
@@ -130,7 +131,9 @@ namespace FastAop
             //method list
             for (int m = 0; m < methodList.Length; m++)
             {
+                var contextId = Guid.NewGuid().ToString();
                 var currentMthod = methodList[m];
+                FastAopCache.Set(contextId, currentMthod);
                 var mTypes = currentMthod.GetParameters().Select(d => d.ParameterType).ToArray();
                 var method = builder.DefineMethod(currentMthod.Name, MethodAttributes.Public | MethodAttributes.NewSlot | MethodAttributes.Virtual, currentMthod.ReturnType, mTypes);
 
@@ -196,10 +199,10 @@ namespace FastAop
                 mIL.Emit(OpCodes.Ldstr, model.serviceType.AssemblyQualifiedName);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod("set_ServiceType"), new[] { typeof(string) });
 
-                //BeforeContext MethodName
+                //BeforeContext contextId
                 mIL.Emit(OpCodes.Ldloc, beforeContext);
-                mIL.Emit(OpCodes.Ldstr, currentMthod.Name);
-                mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod("set_MethodName"), new[] { typeof(string) });
+                mIL.Emit(OpCodes.Ldstr, contextId);
+                mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod("set_Id"), new[] { typeof(string) });
 
                 //BeforeContext AttributeName
                 mIL.Emit(OpCodes.Ldloc, beforeContext);
@@ -221,10 +224,10 @@ namespace FastAop
                 mIL.Emit(OpCodes.Ldstr, model.serviceType.AssemblyQualifiedName);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("set_ServiceType"), new[] { typeof(string) });
 
-                //AfterContext MethodName
+                //AfterContext contextId
                 mIL.Emit(OpCodes.Ldloc, afterContext);
-                mIL.Emit(OpCodes.Ldstr, currentMthod.Name);
-                mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("set_MethodName"), new[] { typeof(string) });
+                mIL.Emit(OpCodes.Ldstr, contextId);
+                mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("set_Id"), new[] { typeof(string) });
 
                 //AfterContext AttributeName
                 mIL.Emit(OpCodes.Ldloc, afterContext);
@@ -319,10 +322,10 @@ namespace FastAop
                 mIL.Emit(OpCodes.Ldstr, model.serviceType.AssemblyQualifiedName);
                 mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod("set_ServiceType"), new[] { typeof(string) });
 
-                //Exception Context MethodName
+                //Exception Context contextId
                 mIL.Emit(OpCodes.Ldloc, exceptionContext);
-                mIL.Emit(OpCodes.Ldstr, currentMthod.Name);
-                mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod("set_MethodName"), new[] { typeof(string) });
+                mIL.Emit(OpCodes.Ldstr, contextId);
+                mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod("set_Id"), new[] { typeof(string) });
 
                 //Exception Context Paramter
                 mIL.Emit(OpCodes.Ldloc, exceptionContext);
