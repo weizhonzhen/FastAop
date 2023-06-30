@@ -1,20 +1,32 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Generic;
+using System.Reflection;
 
 namespace FastAop.Core.Cache
 {
     internal class FastAopCache
     {
-        private static ConcurrentDictionary<string, Type> cache = new ConcurrentDictionary<string, Type>();
+        private static Dictionary<string, MethodInfo> cache = new Dictionary<string, MethodInfo>();
 
-        internal static Type GetType(string key)
+        internal static MethodInfo Get(string key)
         {
             if (cache.ContainsKey(key))
                 return cache[key];
             else
             {
-                cache.TryAdd(key, Type.GetType(key));
-                return cache[key];
+                return null;
+            }
+        }
+
+        internal static void Set(string key, MethodInfo method)
+        {
+            if (!cache.ContainsKey(key))
+            {
+                cache.Add(key, method);
+            }
+            else
+            {
+                cache.Remove(key);
+                cache.Add(key, method);
             }
         }
     }
