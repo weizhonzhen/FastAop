@@ -8,12 +8,41 @@ namespace FastAop.Core.Context
 {
     public class ExceptionContext
     {
-        public string Id { get; set; }
+        internal object _Result;
+        internal string _id;
+        internal string _ServiceType;
+        internal string[] _AttributeName;
+        internal object[] _Paramter;
 
-        private object _Result;
-        public object[] Paramter { get; set; }
+        public string Id
+        {
+            get { return _id; }
+            set
+            {
+                if (string.IsNullOrEmpty(_id))
+                    _id = value;
+            }
+        }
 
-        public string ServiceType { get; set; }
+        public object[] Paramter
+        {
+            get { return _Paramter; }
+            set
+            {
+                if (_Paramter == null)
+                    _Paramter = value;
+            }
+        }
+
+        public string ServiceType
+        {
+            get { return _ServiceType; }
+            set
+            {
+                if (string.IsNullOrEmpty(_ServiceType))
+                    _ServiceType = value;
+            }
+        }
 
         public MethodInfo Method
         {
@@ -70,6 +99,14 @@ namespace FastAop.Core.Context
             internal set { }
         }
 
-        public string[] AttributeName { get; set; }
+        public string[] AttributeName
+        {
+            get { return _AttributeName; }
+            set
+            {
+                if (_AttributeName == null)
+                    _AttributeName = value;
+            }
+        }
     }
 }

@@ -1,6 +1,5 @@
 ﻿using FastAop.Core.Cache;
 using FastAop.Core.Result;
-using System;
 using System.Reflection;
 using System.Threading.Tasks;
 
@@ -8,12 +7,40 @@ namespace FastAop.Core.Context
 {
     public class BeforeContext
     {
-        public string Id { get; set; }
+        internal object _Result;
+        internal string _id;
+        internal string _ServiceType;
+        internal string[] _AttributeName;
+        internal object[] _Paramter;
+        public string Id
+        {
+            get { return _id; }
+            set
+            {
+                if (string.IsNullOrEmpty(_id))
+                    _id = value;
+            }
+        }
 
-        private object _Result = new object();
-        public object[] Paramter { get; set; }
+        public object[] Paramter
+        {
+            get { return _Paramter; }
+            set
+            {
+                if (_Paramter == null)
+                    _Paramter = value;
+            }
+        }
 
-        public string ServiceType { get; set; }
+        public string ServiceType
+        {
+            get { return _ServiceType; }
+            set
+            {
+                if (string.IsNullOrEmpty(_ServiceType))
+                    _ServiceType = value;
+            }
+        }
 
         public MethodInfo Method
         {
@@ -68,6 +95,14 @@ namespace FastAop.Core.Context
             internal set { }
         }
 
-        public string[] AttributeName { get; set; }
+        public string[] AttributeName
+        {
+            get { return _AttributeName; }
+            set
+            {
+                if (_AttributeName == null)
+                    _AttributeName = value;
+            }
+        }
     }
 }
