@@ -258,7 +258,7 @@ namespace FastAop
             });
         }
 
-        internal static object Instance(Type b, Type iface, ServiceLifetime lifetime = ServiceLifetime.Scoped,bool isReInstance=false)
+        internal static object Instance(Type b, Type iface, ServiceLifetime lifetime = ServiceLifetime.Scoped, bool isReInstance = false)
         {
             object obj = null, temp = null;
             foreach (var item in b.GetRuntimeFields())
@@ -283,8 +283,8 @@ namespace FastAop
                 if (obj == null && !isReInstance)
                     continue;
 
-                if(obj ==null && isReInstance)
-                    obj= Instance(b, iface, FastAop.ServiceAopType.GetValue(iface));
+                if (obj == null && isReInstance)
+                    obj = Instance(b, iface, FastAop.ServiceAopType.GetValue(iface));
 
                 if (temp == null)
                 {
@@ -305,8 +305,9 @@ namespace FastAop
 
                     if (param.FieldType.IsInterface)
                     {
-                        var fieldType = isReInstance ? ServiceType.GetValue(param.FieldType) : ServiceInstance.GetValue(param.FieldType).GetType();
-                        Instance(fieldType, param.FieldType, lifetime, isReInstance);
+                        var fieldType = isReInstance ? ServiceType.GetValue(param.FieldType) : ServiceInstance.GetValue(param.FieldType)?.GetType();
+                        if (fieldType != null)
+                            Instance(fieldType, param.FieldType, lifetime, isReInstance);
                     }
                     else if (param.FieldType.GetInterfaces().Any())
                     {
