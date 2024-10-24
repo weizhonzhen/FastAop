@@ -1,25 +1,25 @@
-﻿using FastAop.Core.Cache;
-using FastAop.Core.Result;
+﻿using FastAop.Cache;
+using FastAop.Result;
 using System.Reflection;
 using System.Threading.Tasks;
 
-namespace FastAop.Core.Context
+namespace FastAop.Context
 {
     public class AfterContext
     {
         internal object _Result;
-        internal string _Id;
+        internal string _id;
         internal string _ServiceType;
         internal string[] _AttributeName;
         internal object[] _Paramter;
 
         public string Id
         {
-            get { return _Id; }
+            get { return _id; }
             set
             {
-                if (string.IsNullOrEmpty(_Id))
-                    _Id = value;
+                if (string.IsNullOrEmpty(_id))
+                    _id = value;
             }
         }
 
@@ -81,15 +81,6 @@ namespace FastAop.Core.Context
             get
             {
                 return Method.ReturnType.BaseType == typeof(Task) || Method.ReturnType == typeof(Task);
-            }
-            internal set { }
-        }
-
-        public bool isValueTaskResult
-        {
-            get
-            {
-                return BaseResult.IsValueTask(Method.ReturnType);
             }
             internal set { }
         }
