@@ -87,10 +87,10 @@ namespace FastAop.Core.Context
 
             if (method.Count > 1)
             {
-                for(int i = 0; i < method.Count; i++)
+                for (int i = 0; i < method.Count; i++)
                 {
                     var temp = method[i].GetParameters().Select(d => d.ParameterType).ToArray();
-                    for(int j = 0; j < temp.Length; j++)
+                    for (int j = 0; j < temp.Length; j++)
                     {
                         if (temp[j].Name != types[j].Name)
                             break;

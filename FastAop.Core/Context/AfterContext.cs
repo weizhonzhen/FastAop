@@ -1,71 +1,18 @@
-﻿using FastAop.Cache;
-using FastAop.Result;
+﻿using FastAop.Core.Result;
 using System.Reflection;
 using System.Threading.Tasks;
 
-namespace FastAop.Context
+namespace FastAop.Core.Context
 {
     public class AfterContext
     {
-        internal object _Result;
-        internal string _id;
-        internal string _ServiceType;
-        internal string[] _AttributeName;
-        internal object[] _Paramter;
+        public object[] Paramter { get; set; }
 
-        public string Id
-        {
-            get { return _id; }
-            set
-            {
-                if (string.IsNullOrEmpty(_id))
-                    _id = value;
-            }
-        }
+        public string ServiceType { get; set; }
 
-        public object[] Paramter
-        {
-            get { return _Paramter; }
-            set
-            {
-                if (_Paramter == null)
-                    _Paramter = value;
-            }
-        }
+        public MethodInfo Method { get; set; }
 
-        public string ServiceType
-        {
-            get { return _ServiceType; }
-            set
-            {
-                if (string.IsNullOrEmpty(_ServiceType))
-                    _ServiceType = value;
-            }
-        }
-
-        public MethodInfo Method
-        {
-            get
-            {
-                return FastAopCache.Get(Id);
-            }
-            internal set { }
-        }
-
-        public object Result
-        {
-            get
-            {
-                return _Result;
-            }
-            set
-            {
-                if (Method.ReturnType == typeof(void))
-                    return;
-
-                _Result = BaseResult.SetResult(this, value);
-            }
-        }
+        public object Result { get; set; }
 
         public object TaskResult
         {
@@ -85,14 +32,15 @@ namespace FastAop.Context
             internal set { }
         }
 
-        public string[] AttributeName
+        public bool isValueTaskResult
         {
-            get { return _AttributeName; }
-            set
+            get
             {
-                if (_AttributeName == null)
-                    _AttributeName = value;
+                return BaseResult.IsValueTask(Method.ReturnType);
             }
+            internal set { }
         }
+
+        public string[] AttributeName { get; set; }
     }
 }
