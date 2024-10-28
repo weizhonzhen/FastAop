@@ -1,5 +1,4 @@
-﻿using FastAop.Cache;
-using FastAop.Context;
+﻿using FastAop.Context;
 using FastAop.Model;
 using System;
 using System.Collections.Concurrent;
@@ -77,9 +76,7 @@ namespace FastAop
             //method list
             for (int m = 0; m < methodList.Length; m++)
             {
-                var contextId = Guid.NewGuid().ToString();
                 var currentMthod = methodList[m];
-                FastAopCache.Set(contextId, currentMthod);
                 if (currentMthod.Name == nameof(MethodBase.Equals) || currentMthod.Name == nameof(MethodBase.GetHashCode) || currentMthod.Name == nameof(MethodBase.ToString) || currentMthod.Name == nameof(MethodBase.GetType))
                     continue;
 
@@ -142,22 +139,29 @@ namespace FastAop
                 //BeforeContext Paramter
                 mIL.Emit(OpCodes.Ldloc, beforeContext);
                 mIL.Emit(OpCodes.Ldloc, local);
-                mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod($"set_{nameof(BeforeContext.Paramter)}"), new[] { typeof(object[]) });
+                mIL.Emit(OpCodes.Callvirt, typeof(BeforeContext).GetProperty("Paramter").GetSetMethod(true));
 
                 //BeforeContext ServerName
                 mIL.Emit(OpCodes.Ldloc, beforeContext);
                 mIL.Emit(OpCodes.Ldstr, model.serviceType.AssemblyQualifiedName);
-                mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod($"set_{nameof(BeforeContext.ServiceType)}"), new[] { typeof(string) });
+                mIL.Emit(OpCodes.Callvirt, typeof(BeforeContext).GetProperty("ServiceType").GetSetMethod(true));
 
-                //Before BeforeContext contextId
+                //BeforeContext methodinfo
                 mIL.Emit(OpCodes.Ldloc, beforeContext);
-                mIL.Emit(OpCodes.Ldstr, contextId);
-                mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod($"set_{nameof(BeforeContext.Id)}"), new[] { typeof(string) });
+                mIL.Emit(OpCodes.Ldtoken, currentMthod);
+                if (model.serviceType.IsGenericType || currentMthod.IsGenericMethod)
+                {
+                    mIL.Emit(OpCodes.Ldtoken, model.serviceType);
+                    mIL.Emit(OpCodes.Call, typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle), typeof(RuntimeTypeHandle) }));
+                }
+                else
+                    mIL.Emit(OpCodes.Call, typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) }));
+                mIL.Emit(OpCodes.Callvirt, typeof(BeforeContext).GetProperty("Method").GetSetMethod(true));
 
                 //BeforeContext AttributeName
                 mIL.Emit(OpCodes.Ldloc, beforeContext);
                 mIL.Emit(OpCodes.Ldloc, AttributeName);
-                mIL.EmitCall(OpCodes.Callvirt, typeof(BeforeContext).GetMethod($"set_{nameof(BeforeContext.AttributeName)}"), new[] { typeof(string[]) });
+                mIL.Emit(OpCodes.Callvirt, typeof(BeforeContext).GetProperty("AttributeName").GetSetMethod(true));
 
                 //Declare AfterContext
                 var afterContext = mIL.DeclareLocal(typeof(AfterContext));
@@ -167,22 +171,29 @@ namespace FastAop
                 //AfterContext Paramter
                 mIL.Emit(OpCodes.Ldloc, afterContext);
                 mIL.Emit(OpCodes.Ldloc, local);
-                mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod($"set_{nameof(AfterContext.Paramter)}"), new[] { typeof(object[]) });
+                mIL.Emit(OpCodes.Callvirt, typeof(AfterContext).GetProperty("Paramter").GetSetMethod(true));
 
                 //AfterContext ServerName
                 mIL.Emit(OpCodes.Ldloc, afterContext);
                 mIL.Emit(OpCodes.Ldstr, model.serviceType.AssemblyQualifiedName);
-                mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod($"set_{nameof(AfterContext.ServiceType)}"), new[] { typeof(string) });
+                mIL.Emit(OpCodes.Callvirt, typeof(AfterContext).GetProperty("ServiceType").GetSetMethod(true));
 
-                //AfterContext contextId
+                //AfterContext methodinfo
                 mIL.Emit(OpCodes.Ldloc, afterContext);
-                mIL.Emit(OpCodes.Ldstr, contextId);
-                mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod($"set_{nameof(AfterContext.Id)}"), new[] { typeof(string) });
+                mIL.Emit(OpCodes.Ldtoken, currentMthod);
+                if (model.serviceType.IsGenericType || currentMthod.IsGenericMethod)
+                {
+                    mIL.Emit(OpCodes.Ldtoken, model.serviceType);
+                    mIL.Emit(OpCodes.Call, typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle), typeof(RuntimeTypeHandle) }));
+                }
+                else
+                    mIL.Emit(OpCodes.Call, typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) }));
+                mIL.Emit(OpCodes.Callvirt, typeof(AfterContext).GetProperty("Method").GetSetMethod(true));
 
                 //AfterContext AttributeName
                 mIL.Emit(OpCodes.Ldloc, afterContext);
                 mIL.Emit(OpCodes.Ldloc, AttributeName);
-                mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod($"set_{nameof(AfterContext.AttributeName)}"), new[] { typeof(string[]) });
+                mIL.Emit(OpCodes.Callvirt, typeof(AfterContext).GetProperty("AttributeName").GetSetMethod(true));
 
                 //Declare ExceptionContext
                 var exceptionContext = mIL.DeclareLocal(typeof(ExceptionContext));
@@ -192,7 +203,7 @@ namespace FastAop
                 //ExceptionContext AttributeName
                 mIL.Emit(OpCodes.Ldloc, exceptionContext);
                 mIL.Emit(OpCodes.Ldloc, AttributeName);
-                mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod($"set_{nameof(ExceptionContext.AttributeName)}"), new[] { typeof(string[]) });
+                mIL.Emit(OpCodes.Callvirt, typeof(ExceptionContext).GetProperty("AttributeName").GetSetMethod(true));
 
                 //aop attr
                 var aopAttribute = new List<FastAopAttribute>();
@@ -258,7 +269,7 @@ namespace FastAop
                     //Method ReturnData
                     mIL.Emit(OpCodes.Ldloc, afterContext);
                     mIL.Emit(OpCodes.Ldloc, returnData);
-                    mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod($"set_{nameof(AfterContext.Result)}"), new[] { typeof(object) });
+                    mIL.Emit(OpCodes.Callvirt, typeof(AfterContext).GetProperty("Result").GetSetMethod(true));
                 }
 
                 mIL.BeginCatchBlock(typeof(Exception));
@@ -270,22 +281,29 @@ namespace FastAop
                 //ExceptionContext exception
                 mIL.Emit(OpCodes.Ldloc, exceptionContext);
                 mIL.Emit(OpCodes.Ldloc, exception);
-                mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod($"set_{nameof(ExceptionContext.Exception)}"), new[] { typeof(Exception) });
+                mIL.Emit(OpCodes.Callvirt, typeof(ExceptionContext).GetProperty("Exception").GetSetMethod(true));
 
                 //Exception Context ServerName
                 mIL.Emit(OpCodes.Ldloc, exceptionContext);
                 mIL.Emit(OpCodes.Ldstr, model.serviceType.AssemblyQualifiedName);
-                mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod($"set_{nameof(ExceptionContext.ServiceType)}"), new[] { typeof(string) });
+                mIL.Emit(OpCodes.Callvirt, typeof(ExceptionContext).GetProperty("ServiceType").GetSetMethod(true));
 
-                //ExceptionContext contextId
+                //ExceptionContext methodinfo
                 mIL.Emit(OpCodes.Ldloc, exceptionContext);
-                mIL.Emit(OpCodes.Ldstr, contextId);
-                mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod($"set_{nameof(ExceptionContext.Id)}"), new[] { typeof(string) });
+                mIL.Emit(OpCodes.Ldtoken, currentMthod);
+                if (model.serviceType.IsGenericType || currentMthod.IsGenericMethod)
+                {
+                    mIL.Emit(OpCodes.Ldtoken, model.serviceType);
+                    mIL.Emit(OpCodes.Call, typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle), typeof(RuntimeTypeHandle) }));
+                }
+                else
+                    mIL.Emit(OpCodes.Call, typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle) }));
+                mIL.Emit(OpCodes.Callvirt, typeof(ExceptionContext).GetProperty("Method").GetSetMethod(true));
 
                 //ExceptionContext Paramter;
                 mIL.Emit(OpCodes.Ldloc, exceptionContext);
                 mIL.Emit(OpCodes.Ldloc, local);
-                mIL.EmitCall(OpCodes.Callvirt, typeof(ExceptionContext).GetMethod($"set_{nameof(ExceptionContext.Paramter)}"), new[] { typeof(object[]) });
+                mIL.Emit(OpCodes.Callvirt, typeof(ExceptionContext).GetProperty("Paramter").GetSetMethod(true));
 
                 //attr
                 for (int ex = 0; ex < aopAttribute.Count; ex++)
