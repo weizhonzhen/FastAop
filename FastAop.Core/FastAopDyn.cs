@@ -157,9 +157,9 @@ namespace FastAop.Core
                 //BeforeContext methodinfo
                 mIL.Emit(OpCodes.Ldloc, beforeContext);
                 mIL.Emit(OpCodes.Ldtoken, currentMthod);
-                if (model.interfaceType.IsGenericType || currentMthod.IsGenericMethod)
+                if (model.serviceType.IsGenericType || currentMthod.IsGenericMethod)
                 {
-                    mIL.Emit(OpCodes.Ldtoken, model.interfaceType);
+                    mIL.Emit(OpCodes.Ldtoken, model.serviceType);
                     mIL.Emit(OpCodes.Call, typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle), typeof(RuntimeTypeHandle) }));
                 }
                 else
@@ -189,9 +189,9 @@ namespace FastAop.Core
                 //AfterContext methodinfo
                 mIL.Emit(OpCodes.Ldloc, afterContext);
                 mIL.Emit(OpCodes.Ldtoken, currentMthod);
-                if (model.interfaceType.IsGenericType || currentMthod.IsGenericMethod)
+                if (model.serviceType.IsGenericType || currentMthod.IsGenericMethod)
                 {
-                    mIL.Emit(OpCodes.Ldtoken, model.interfaceType);
+                    mIL.Emit(OpCodes.Ldtoken, model.serviceType);
                     mIL.Emit(OpCodes.Call, typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle), typeof(RuntimeTypeHandle) }));
                 }
                 else
@@ -299,9 +299,9 @@ namespace FastAop.Core
                 //ExceptionContext methodinfo
                 mIL.Emit(OpCodes.Ldloc, exceptionContext);
                 mIL.Emit(OpCodes.Ldtoken, currentMthod);
-                if (model.interfaceType.IsGenericType || currentMthod.IsGenericMethod)
+                if (model.serviceType.IsGenericType || currentMthod.IsGenericMethod)
                 {
-                    mIL.Emit(OpCodes.Ldtoken, model.interfaceType);
+                    mIL.Emit(OpCodes.Ldtoken, model.serviceType);
                     mIL.Emit(OpCodes.Call, typeof(MethodBase).GetMethod("GetMethodFromHandle", new Type[] { typeof(RuntimeMethodHandle), typeof(RuntimeTypeHandle) }));
                 }
                 else
