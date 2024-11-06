@@ -8,9 +8,10 @@ namespace FastAop.Constructor
 {
     internal static class Constructor
     {
+        private static ConcurrentDictionary<string, ConstructorModel> cache = new ConcurrentDictionary<string, ConstructorModel>();
         internal static int depth = 0;
 
-        internal static void Param(Type paramType, Type aopType=null)
+        internal static void Param(Type paramType, Type aopType = null)
         {
             if (paramType.isSysType())
                 return;
@@ -18,14 +19,14 @@ namespace FastAop.Constructor
             if (!paramType.IsInterface && paramType.GetInterfaces().Any())
             {
                 var interfaceType = paramType.GetInterfaces().First();
-                FastAop.ServiceInstance.SetValue(interfaceType, FastAop.Instance(paramType, interfaceType,aopType));
+                FastAop.ServiceInstance.SetValue(interfaceType, FastAop.Instance(paramType, interfaceType, aopType));
                 FastAop.ServiceAopType.SetValue(interfaceType, aopType);
                 FastAop.ServiceType.SetValue(interfaceType, paramType);
                 return;
             }
             else if (!paramType.IsInterface && !paramType.GetInterfaces().Any())
             {
-                Dic.SetValueDyn(paramType, FastAopDyn.Instance(paramType,aopType));
+                Dic.SetValueDyn(paramType, FastAopDyn.Instance(paramType, aopType));
                 FastAop.ServiceAopType.SetValue(paramType, aopType);
                 FastAop.ServiceType.SetValue(paramType, paramType);
                 return;
@@ -54,7 +55,7 @@ namespace FastAop.Constructor
                         });
                     }
 
-                    FastAop.ServiceInstance.SetValue(paramType, FastAop.Instance(param, paramType,aopType));
+                    FastAop.ServiceInstance.SetValue(paramType, FastAop.Instance(param, paramType, aopType));
                     FastAop.ServiceAopType.SetValue(paramType, aopType);
                     FastAop.ServiceType.SetValue(paramType, param);
                 }
@@ -73,43 +74,51 @@ namespace FastAop.Constructor
 
         internal static ConstructorModel Get(Type serviceType, Type interfaceType)
         {
+            var key = $"{serviceType.FullName}_{interfaceType?.FullName}";
             var model = new ConstructorModel();
-            var list = serviceType.GetRuntimeFields().ToList();
-            serviceType.GetConstructors().ToList().ForEach(a =>
+            cache.TryGetValue(key, out model);
+            if (model == null)
             {
-                a.GetParameters().ToList().ForEach(p =>
+                model = new ConstructorModel();
+                var list = serviceType.GetRuntimeFields().ToList();
+                serviceType.GetConstructors().ToList().ForEach(a =>
                 {
-                    var paramType = list.FindAll(l => l.FieldType == p.ParameterType && l.GetCustomAttribute<Autowired>() == null);
-                    if (paramType.Count == 1 && paramType[0] != null && !paramType[0].Attributes.HasFlag(FieldAttributes.InitOnly))
-                        throw new AopException($"{serviceType.FullName} Field {paramType[0]} must attribute readonly");
+                    a.GetParameters().ToList().ForEach(p =>
+                    {
+                        var paramType = list.FindAll(l => l.FieldType == p.ParameterType && l.GetCustomAttribute<Autowired>() == null);
+                        if (paramType.Count == 1 && paramType[0] != null && !paramType[0].Attributes.HasFlag(FieldAttributes.InitOnly))
+                            throw new AopException($"{serviceType.FullName} Field {paramType[0]} must attribute readonly");
 
-                    model.constructorType.Add(p.ParameterType);
-                    model.dynType.Add(p.ParameterType);
-                    if (p.ParameterType.isSysType() && !p.ParameterType.IsValueType)
-                        model.dynParam.Add("");
-                    else if (p.ParameterType.isSysType() && p.ParameterType.IsValueType)
-                        model.dynParam.Add(Activator.CreateInstance(p.ParameterType));
-                    else if (!p.ParameterType.IsAbstract && !p.ParameterType.IsInterface && Dic.GetValueDyn(p.ParameterType) != null)
-                        model.dynParam.Add(Dic.GetValueDyn(p.ParameterType));
-                    else if (!p.ParameterType.IsAbstract && !p.ParameterType.IsInterface)
-                        model.dynParam.Add(Activator.CreateInstance(p.ParameterType));
-                    else if (p.ParameterType.IsInterface)
-                        model.dynParam.Add(FastAop.ServiceInstance.GetValue(p.ParameterType));
+                        model.constructorType.Add(p.ParameterType);
+                        model.dynType.Add(p.ParameterType);
+                        if (p.ParameterType.isSysType() && !p.ParameterType.IsValueType)
+                            model.dynParam.Add("");
+                        else if (p.ParameterType.isSysType() && p.ParameterType.IsValueType)
+                            model.dynParam.Add(Activator.CreateInstance(p.ParameterType));
+                        else if (!p.ParameterType.IsAbstract && !p.ParameterType.IsInterface && Dic.GetValueDyn(p.ParameterType) != null)
+                            model.dynParam.Add(Dic.GetValueDyn(p.ParameterType));
+                        else if (!p.ParameterType.IsAbstract && !p.ParameterType.IsInterface)
+                            model.dynParam.Add(Activator.CreateInstance(p.ParameterType));
+                        else if (p.ParameterType.IsInterface)
+                            model.dynParam.Add(FastAop.ServiceInstance.GetValue(p.ParameterType));
+                    });
                 });
-            });
 
-            if (interfaceType != null)
-            {
-                model.interfaceType = interfaceType;
-                model.dynType.Add(interfaceType);
+                if (interfaceType != null)
+                {
+                    model.interfaceType = interfaceType;
+                    model.dynType.Add(interfaceType);
+                }
+
+                if (interfaceType == null)
+                    model.dynType.Add(serviceType);
+
+                model.serviceType = serviceType;
+                cache.TryAdd(key, model);
+                return model;
             }
-
-            if (interfaceType == null)
-                model.dynType.Add(serviceType);
-
-            model.serviceType = serviceType;
-
-            return model;
+            else
+                return model;
         }
     }
 }
@@ -233,7 +242,7 @@ namespace System.Collections.Concurrent
         {
             if (key == null)
                 return null;
-                   
+
             if (FastAopDyn.ServiceInstance == null)
                 return null;
 
