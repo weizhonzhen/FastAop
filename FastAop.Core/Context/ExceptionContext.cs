@@ -7,6 +7,7 @@ namespace FastAop.Core.Context
 {
     public class ExceptionContext
     {
+        internal object _Result;
         public object[] Paramter { get; set; }
 
         public string ServiceType { get; set; }
@@ -16,7 +17,21 @@ namespace FastAop.Core.Context
         public Exception Exception { get; set; }
 
         public bool IsReturn { get; set; }
-        public object Result { get; set; }
+
+        public object Result
+        {
+            get
+            {
+                return _Result;
+            }
+            set
+            {
+                if (Method.ReturnType == typeof(void))
+                    return;
+
+                _Result = BaseResult.SetResult(this, value);
+            }
+        }
 
         public object TaskResult
         {
