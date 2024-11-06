@@ -6,6 +6,8 @@ namespace FastAop.Context
 {
     public class BeforeContext
     {
+        internal object _Result;
+
         public string Id { get; set; }
 
         public object[] Paramter { get; set; }
@@ -16,7 +18,20 @@ namespace FastAop.Context
 
         public bool IsReturn { get; set; }
 
-        public object Result { get; set; }
+        public object Result
+        {
+            get
+            {
+                return _Result;
+            }
+            set
+            {
+                if (Method.ReturnType == typeof(void))
+                    return;
+
+                _Result = BaseResult.SetResult(this, value);
+            }
+        }
 
         public object TaskResult
         {
@@ -37,5 +52,5 @@ namespace FastAop.Context
         }
 
         public string[] AttributeName { get; set; }
-}
+    }
 }
