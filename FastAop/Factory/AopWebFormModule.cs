@@ -11,7 +11,7 @@ namespace FastAop.Factory
 {
     public class AopWebFormModule : IHttpModule
     {
-        private ConcurrentDictionary<Type, List<FieldInfo>> cache = new ConcurrentDictionary<Type, List<FieldInfo>>();
+        private ConcurrentDictionary<Type, Page> cache = new ConcurrentDictionary<Type, Page>();
         private HttpApplication application;
 
         public void Dispose() { }
@@ -36,32 +36,36 @@ namespace FastAop.Factory
                 return;
 
             var type = page.GetType().BaseType;
-            cache.TryGetValue(type, out list);
+            Page cachePage = null;
+            cache.TryGetValue(type, out cachePage);
 
-            if (list == null)
+            if (cachePage == null)
             {
                 list = type.GetRuntimeFields().ToList();
-                cache.TryAdd(type, list);
+
+                foreach (var item in list)
+                {
+                    if (item.GetCustomAttribute<Autowired>() == null)
+                        continue;
+
+                    if (!item.Attributes.HasFlag(FieldAttributes.InitOnly))
+                        throw new AopException($"{page.GetType().Name} field {item} attribute must readonly");
+
+                    if (item.FieldType.isSysType())
+                        throw new Exception($"{page.GetType().Name} field {item} is system type not support");
+
+                    if (item.FieldType.IsInterface)
+                        item.SetValueDirect(__makeref(page), FastAop.ServiceInstance.GetValue(item.FieldType));
+                    else if (item.FieldType.GetInterfaces().Any())
+                        item.SetValueDirect(__makeref(page), FastAop.ServiceInstance.GetValue(item.FieldType.GetInterfaces().First()));
+                    else
+                        item.SetValue(page, Dic.GetValueDyn(item.FieldType));
+                }
+
+                cache.TryAdd(type, cachePage);
             }
 
-            foreach (var item in list)
-            {
-                if (item.GetCustomAttribute<Autowired>() == null)
-                    continue;
-
-                if (!item.Attributes.HasFlag(FieldAttributes.InitOnly))
-                    throw new AopException($"{page.GetType().Name} field {item} attribute must readonly");
-
-                if (item.FieldType.isSysType())
-                    throw new Exception($"{page.GetType().Name} field {item} is system type not support");
-
-                if (item.FieldType.IsInterface)
-                    item.SetValueDirect(__makeref(page), FastAop.ServiceInstance.GetValue(item.FieldType));
-                else if (item.FieldType.GetInterfaces().Any())
-                    item.SetValueDirect(__makeref(page), FastAop.ServiceInstance.GetValue(item.FieldType.GetInterfaces().First()));
-                else
-                    item.SetValue(page, Dic.GetValueDyn(item.FieldType));
-            }
+            page = cachePage;
         }
 
         private void Application_EndRequest(object sender, EventArgs e)
@@ -88,7 +92,7 @@ namespace FastAop.Factory
                     {
                         if (serviceType != null && time.Key.IsInterface && FastAop.ServiceInstance.GetValue(time.Key) == null)
                         {
-                            var obj = FastAop.Instance(serviceType, time.Key, time.Value,true);
+                            var obj = FastAop.Instance(serviceType, time.Key, time.Value, true);
                             FastAop.ServiceInstance.SetValue(time.Key, obj);
                         }
 
