@@ -1,6 +1,5 @@
 ﻿using FastAop.Core.Context;
 using System;
-using System.Collections.Concurrent;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -10,8 +9,6 @@ namespace FastAop.Core.Result
 {
     internal class BaseResult
     {
-        private static ConcurrentDictionary<string, DynamicMethod> cacheDyn = new ConcurrentDictionary<string, DynamicMethod>();
-
         private delegate object EmitInvoke(object target, object[] paramters);
 
         internal static object Invoke(object model, MethodInfo methodInfo, object[] param)
@@ -20,14 +17,7 @@ namespace FastAop.Core.Result
                 return null;
             try
             {
-                var dynKey = $"InvokeEmit_{typeof(EmitInvoke).Module}";
-                DynamicMethod dynamicMethod = null;
-                cacheDyn.TryGetValue(dynKey, out dynamicMethod);
-                if (dynamicMethod == null)
-                {
-                    dynamicMethod = new DynamicMethod("InvokeEmit", typeof(object), new Type[] { typeof(object), typeof(object[]) }, typeof(EmitInvoke).Module);
-                    cacheDyn.TryAdd(dynKey, dynamicMethod);
-                }
+                var dynamicMethod = new DynamicMethod("InvokeEmit", typeof(object), new Type[] { typeof(object), typeof(object[]) }, typeof(EmitInvoke).Module);
                 var iL = dynamicMethod.GetILGenerator();
                 var info = methodInfo.GetParameters();
                 var type = new Type[info.Length];
@@ -136,11 +126,6 @@ namespace FastAop.Core.Result
             return SetResult(context.IsTaskResult, value, context.isValueTaskResult, context.Method, context.Method.ReturnType, context.IsReturn, context.Method.Name);
         }
 
-        internal static object GetResult(ExceptionContext context, object _Result)
-        {
-            return GetResult(context.IsTaskResult, _Result, context.isValueTaskResult, context.ServiceType, context.Method, context.Method.ReturnType);
-        }
-
         internal static object SetResult(AfterContext context, object value)
         {
             if (!context.IsTaskResult && value is Task)
@@ -152,11 +137,6 @@ namespace FastAop.Core.Result
         internal static object SetResult(BeforeContext context, object value)
         {
             return SetResult(context.IsTaskResult, value, context.isValueTaskResult, context.Method, context.Method.ReturnType, context.IsReturn, context.Method.Name);
-        }
-
-        internal static object GetResult(BeforeContext context, object _Result)
-        {
-            return GetResult(context.IsTaskResult, _Result, context.isValueTaskResult, context.ServiceType, context.Method, context.Method.ReturnType);
         }
 
         private static object SetResult(bool IsTaskResult, object value, bool isValueTaskResult, MethodInfo Method, Type ResultType, bool IsReturn, string MethodName)
