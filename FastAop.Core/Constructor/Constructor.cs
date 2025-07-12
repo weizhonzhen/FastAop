@@ -25,7 +25,10 @@ namespace FastAop.Core.Constructor
                 obj = FastAop.Instance(paramType, paramType.GetInterfaces().First(), aopType);
             }
             else if (!paramType.IsInterface && !paramType.GetInterfaces().Any())
-                obj = FastAopDyn.Instance(paramType, aopType);
+            {
+                var model = Constructor.Get(paramType, null);
+                obj = Activator.CreateInstance(paramType, model.dynParam.ToArray());
+            }
 
             serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == serverType));
             if (serviceLifetime == ServiceLifetime.Scoped && obj != null)
@@ -106,7 +109,10 @@ namespace FastAop.Core.Constructor
                         else if (!p.ParameterType.IsAbstract && !p.ParameterType.IsInterface && FastAopExtension.serviceProvider.GetService(p.ParameterType) != null)
                             model.dynParam.Add(FastAopExtension.serviceProvider.GetService(p.ParameterType));
                         else if (!p.ParameterType.IsAbstract && !p.ParameterType.IsInterface)
-                            model.dynParam.Add(Activator.CreateInstance(p.ParameterType));
+                        {
+                            var temp = Constructor.Get(p.ParameterType, null);
+                            model.dynParam.Add(Activator.CreateInstance(p.ParameterType, temp.dynParam.ToArray()));
+                        }
                         else if (FastAopExtension.serviceProvider.GetService(p.ParameterType) == null && p.ParameterType.IsInterface && p.ParameterType.IsGenericType)
                             throw new Exception($"AddFastAopGeneric Method，{serviceType.FullName} Constructor have Parameter Generic Type");
                         else if (FastAopExtension.serviceProvider.GetService(p.ParameterType) == null && p.ParameterType.IsInterface)

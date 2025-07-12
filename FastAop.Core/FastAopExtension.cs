@@ -78,9 +78,10 @@ namespace Microsoft.Extensions.DependencyInjection
                         }
                         else if (!b.IsInterface && !b.GetInterfaces().Any())
                         {
-                            var obj = FastAopDyn.Instance(b, aopType);
+                            var model = Constructor.Get(b, null);
+                            var obj = Activator.CreateInstance(b, model.dynParam.ToArray());
                             if (obj == null)
-                                return; 
+                                return;
                             AddService(serviceCollection, serviceLifetime, b, obj);
                         }
                     });
@@ -162,7 +163,7 @@ namespace Microsoft.Extensions.DependencyInjection
                                 if (!b.IsInterface && b.GetInterfaces().Any())
                                 {
                                     var serviceType = b.MakeGenericType(new Type[1] { m });
-                                    foreach(var iface in serviceType.GetInterfaces())
+                                    foreach (var iface in serviceType.GetInterfaces())
                                     {
                                         var obj = FastAop.Core.FastAop.Instance(serviceType, iface, aopType);
                                         serviceCollection.Remove(serviceCollection.FirstOrDefault(a => a.ServiceType == iface));
@@ -332,7 +333,7 @@ namespace Microsoft.Extensions.DependencyInjection
             return serviceCollection;
         }
 
-        public static IServiceCollection AddFastAopScoped<S,I>(this IServiceCollection serviceCollection, Type aopType = null)
+        public static IServiceCollection AddFastAopScoped<S, I>(this IServiceCollection serviceCollection, Type aopType = null)
         {
             var serviceType = typeof(S);
             var interfaceType = typeof(I);
@@ -380,7 +381,7 @@ namespace Microsoft.Extensions.DependencyInjection
             return serviceCollection;
         }
 
-        private static object Instance(Type b,Type iface, bool isFastAopCall)
+        private static object Instance(Type b, Type iface, bool isFastAopCall)
         {
             object obj = null, temp = null;
             foreach (var item in b.GetRuntimeFields())
@@ -432,12 +433,12 @@ namespace Microsoft.Extensions.DependencyInjection
                         throw new Exception($"{b.Name} field {item} is system type not support");
 
                     if (param.FieldType.IsInterface)
-                        Instance(serviceProvider.GetService(param.FieldType).GetType(), iface, isFastAopCall);
+                        Instance(serviceProvider.GetService(param.FieldType).GetType(), param.FieldType, isFastAopCall);
                     else if (param.FieldType.GetInterfaces().Any())
                     {
                         foreach (var iType in param.FieldType.GetInterfaces())
                         {
-                            Instance(serviceProvider.GetService(iType).GetType(),iType, isFastAopCall);
+                            Instance(serviceProvider.GetService(iType).GetType(), iType, isFastAopCall);
                         }
                     }
                 }
@@ -450,14 +451,17 @@ namespace Microsoft.Extensions.DependencyInjection
                 var objFildType = obj.GetType().GetRuntimeFields().First().FieldType;
                 if (!objFildType.IsInterface && !objFildType.GetInterfaces().Any())
                     obj.GetType().GetRuntimeFields().First().SetValue(obj, temp);
-                else
+                else if (obj.GetType().GetRuntimeFields().First().FieldType == temp.GetType())
                     obj.GetType().GetRuntimeFields().First().SetValueDirect(__makeref(obj), temp);
 
                 if (obj.GetType().FullName.EndsWith(".dynamic"))
                     objFildType.GetRuntimeFields().First().SetValue(obj, serviceProvider.GetService(item.FieldType));
             }
 
-            return obj;
+            if (iface != null)
+                return obj;
+            else
+                return temp;
         }
 
         private static object InstanceGeneric(IServiceCollection serviceCollection, List<Type> list, Type b, bool isFastAopCall)
@@ -571,7 +575,7 @@ namespace Microsoft.Extensions.DependencyInjection
             return list;
         }
 
-        private static void AddService(this IServiceCollection serviceCollection, ServiceLifetime serviceLifetime,Type iface,object obj)
+        private static void AddService(this IServiceCollection serviceCollection, ServiceLifetime serviceLifetime, Type iface, object obj)
         {
             if (serviceLifetime == ServiceLifetime.Scoped)
                 serviceCollection.AddScoped(iface, s => { return obj; });

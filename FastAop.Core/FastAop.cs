@@ -177,7 +177,7 @@ namespace FastAop.Core
                     mIL.Emit(OpCodes.Stelem_Ref);
                 }
 
-                //DeclareContext Paramter
+                //DeclareContext BeforeContext
                 var beforeContext = mIL.DeclareLocal(typeof(BeforeContext));
                 mIL.Emit(OpCodes.Newobj, typeof(BeforeContext).GetConstructor(Type.EmptyTypes));
                 mIL.Emit(OpCodes.Stloc, beforeContext);
@@ -311,7 +311,8 @@ namespace FastAop.Core
                     mIL.Emit(OpCodes.Ldloc, afterContext);
                     mIL.Emit(OpCodes.Ldloc, returnData);
 
-                    mIL.Emit(OpCodes.Callvirt, typeof(AfterContext).GetProperty("Result").GetSetMethod(true));
+                    mIL.EmitCall(OpCodes.Callvirt, typeof(AfterContext).GetMethod("set_Result"), new[] { typeof(object) });
+                    //mIL.Emit(OpCodes.Callvirt, typeof(AfterContext).GetProperty("Result").GetSetMethod(true));
                 }
 
                 mIL.BeginCatchBlock(typeof(Exception));
