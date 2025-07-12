@@ -74,7 +74,9 @@ namespace FastAop
                         }
                         else if (!b.IsInterface && !b.GetInterfaces().Any())
                         {
-                            Dic.SetValueDyn(interfaceType, FastAopDyn.Instance(b, aopType));
+                            var model = Constructor.Constructor.Get(b, null);
+                            var obj = Activator.CreateInstance(b, model.dynParam.ToArray());
+                            Dic.SetValueDyn(interfaceType, obj);
                             ServiceTime.SetValue(interfaceType, lifetime);
                             ServiceAopType.SetValue(interfaceType, aopType);
                             ServiceType.SetValue(interfaceType, b);
@@ -333,14 +335,17 @@ namespace FastAop
                 var objFildType = obj.GetType().GetRuntimeFields().First().FieldType;
                 if (!objFildType.IsInterface && !objFildType.GetInterfaces().Any())
                     obj.GetType().GetRuntimeFields().First().SetValue(obj, temp);
-                else
+                else if (obj.GetType().GetRuntimeFields().First().FieldType == temp.GetType())
                     obj.GetType().GetRuntimeFields().First().SetValueDirect(__makeref(obj), temp);
 
                 if (obj.GetType().FullName.EndsWith(".dynamic"))
                     objFildType.GetRuntimeFields().First().SetValue(obj, Dic.GetValueDyn(item.FieldType));
             }
 
-            return obj;
+            if (iface != null)
+                return obj;
+            else
+                return temp;
         }
 
         private static void InitAutowiredGeneric(string nameSpaceModel, WebType webType, ServiceLifetime lifetime, Type aopType = null)

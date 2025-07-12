@@ -49,9 +49,9 @@ namespace FastAop.Factory
                     item.SetValue(instance, Dic.GetValueDyn(item.FieldType));
             }
 
-            if (!controllerDescriptor.Configuration.Services.GetModelValidatorProviders().ToList().Exists(a => a.GetType().Name == typeof(FastAopWebApiModelValidatorProvider).Name))            
+            if (!controllerDescriptor.Configuration.Services.GetModelValidatorProviders().ToList().Exists(a => a.GetType().Name == typeof(FastAopWebApiModelValidatorProvider).Name))
                 controllerDescriptor.Configuration.Services.Replace(typeof(ModelValidatorProvider), new FastAopWebApiModelValidatorProvider());
-            
+
             return (IHttpController)instance;
         }
     }
